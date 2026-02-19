@@ -1,0 +1,13 @@
+node_modules
+.expo
+.expo-shared
+dist
+web-build
+.git
+.gitignore
+*.md
+.env*
+!.env.example
+.venv
+__pycache__
+*.pyc

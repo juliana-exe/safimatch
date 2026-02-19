@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Safimatch",
+    "slug": "safimatch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#AD1457"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.safimatch.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#AD1457"
+      },
+      "package": "com.safimatch.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-image-picker"]
+  }
+}

@@ -1,0 +1,40 @@
+# Dependências
+node_modules/
+.venv/
+
+# Expo
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Arquivos de ambiente (NUNCA versionar!)
+.env
+# .env.example é seguro (sem valores reais)
+
+# Kong: gerado pelo setup.ps1 — contém chaves JWT reais
+backend/kong.yml
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+expo_err.txt
+expo_out.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/settings.json
+.idea/
+
+# Build
+android/
+ios/
