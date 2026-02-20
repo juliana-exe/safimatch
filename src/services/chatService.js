@@ -12,16 +12,7 @@ export const obterMensagens = async (matchId, pagina = 0, porPagina = 50) => {
 
     const { data, error } = await supabase
       .from('mensagens')
-      .select(`
-        id,
-        match_id,
-        de_user_id,
-        conteudo,
-        tipo,
-        lida,
-        criado_em,
-        perfis!mensagens_de_user_id_fkey(nome, foto_principal)
-      `)
+      .select('id, match_id, de_user_id, conteudo, tipo, lida, criado_em')
       .eq('match_id', matchId)
       .order('criado_em', { ascending: false })
       .range(inicio, inicio + porPagina - 1);
@@ -56,6 +47,51 @@ export const enviarMensagem = async (matchId, conteudo, tipo = 'texto') => {
 
     if (error) throw error;
     return { sucesso: true, mensagem: data };
+  } catch (error) {
+    return { sucesso: false, erro: error.message };
+  }
+};
+
+// ================================================================
+// ENVIAR MENSAGEM DE FOTO NO CHAT
+// ================================================================
+export const enviarFotoMensagem = async (matchId, fotoUrl, viewOnce = false) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Não autenticada');
+
+    const { data, error } = await supabase
+      .from('mensagens')
+      .insert({
+        match_id: matchId,
+        de_user_id: user.id,
+        conteudo: null,
+        tipo: viewOnce ? 'foto_unica' : 'foto',
+        foto_url: fotoUrl,
+        view_once: viewOnce,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { sucesso: true, mensagem: data };
+  } catch (error) {
+    return { sucesso: false, erro: error.message };
+  }
+};
+
+// ================================================================
+// MARCAR FOTO Única COMO VISUALIZADA
+// ================================================================
+export const marcarFotoVisualizadaOnce = async (mensagemId) => {
+  try {
+    const { error } = await supabase
+      .from('mensagens')
+      .update({ view_once_visto: true })
+      .eq('id', mensagemId);
+
+    if (error) throw error;
+    return { sucesso: true };
   } catch (error) {
     return { sucesso: false, erro: error.message };
   }

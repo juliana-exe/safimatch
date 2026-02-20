@@ -1,7 +1,10 @@
 # ================================================================
 # Safimatch — Dockerfile do frontend Expo (Metro bundler)
 # ================================================================
-FROM node:20-alpine
+FROM node:22-alpine
+
+# Atualiza todos os pacotes do sistema para corrigir vulnerabilidades conhecidas
+RUN apk upgrade --no-cache
 
 # Instala dependências nativas necessárias
 RUN apk add --no-cache git curl

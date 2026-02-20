@@ -86,6 +86,38 @@ export const uploadMultiplasFotos = async (userId, imageUris) => {
 };
 
 // ================================================================
+// UPLOAD DE FOTO PARA O CHAT
+//   Caminho: {userId}/chat/{matchId}/{timestamp}.{ext}
+//   Usa o mesmo bucket fotos-perfil (policy já cobre path userId/*)
+// ================================================================
+export const uploadFotoChat = async (userId, matchId, imageUri) => {
+  try {
+    const { dado, contentType } = await uriParaDado(imageUri);
+    const ext = contentType.split('/')[1] || 'jpg';
+    const caminho = `${userId}/chat/${matchId}/${Date.now()}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .upload(caminho, dado, {
+        contentType,
+        upsert: false,
+        cacheControl: '3600',
+      });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from(BUCKET)
+      .getPublicUrl(data.path);
+
+    return { sucesso: true, url: urlData.publicUrl, caminho: data.path };
+  } catch (error) {
+    console.error('[uploadFotoChat]', error);
+    return { sucesso: false, erro: error.message };
+  }
+};
+
+// ================================================================
 // DELETAR FOTO DE UM SLOT
 //   Remove o arquivo do bucket e retorna sucesso/falha
 // ================================================================

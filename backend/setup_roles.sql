@@ -7,8 +7,11 @@ DO $$ BEGIN
     CREATE ROLE authenticated NOLOGIN;
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
-    CREATE ROLE authenticator NOINHERIT LOGIN;
+    CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD current_setting('app.postgres_password', true);
   END IF;
+  -- Garante que a senha esteja sempre sincronizada com POSTGRES_PASSWORD
+  EXECUTE format('ALTER ROLE authenticator WITH PASSWORD %L',
+    current_setting('app.postgres_password', true));
 END $$;
 
 GRANT anon TO authenticator;

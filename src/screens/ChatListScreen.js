@@ -1,5 +1,5 @@
 // src/screens/ChatListScreen.js - Safimatch
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,23 +9,35 @@ import {
   Image,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { listarMatches } from '../services/matchService';
 
 export default function ChatListScreen({ navigation }) {
   const [busca, setBusca] = useState('');
   const [matches, setMatches] = useState([]);
+  const [carregando, setCarregando] = useState(true);
 
-  useEffect(() => {
-    const carregar = async () => {
-      const { matches: lista } = await listarMatches();
-      setMatches(lista ?? []);
-    };
-    carregar();
-  }, []);
+  // Recarrega sempre que a tela receber foco (troca de aba, volta do chat, etc.)
+  useFocusEffect(
+    useCallback(() => {
+      let ativo = true;
+      const carregar = async () => {
+        setCarregando(true);
+        const { matches: lista } = await listarMatches();
+        if (ativo) {
+          setMatches(lista ?? []);
+          setCarregando(false);
+        }
+      };
+      carregar();
+      return () => { ativo = false; };
+    }, [])
+  );
 
   // Separa matches sem mensagens (novos) dos que já conversaram
   const matchesNovos = matches.filter(m => !m.ultima_mensagem);
@@ -142,7 +154,11 @@ export default function ChatListScreen({ navigation }) {
       </View>
 
       {/* Lista de conversas */}
-      {conversasFiltradas.length === 0 ? (
+      {carregando ? (
+        <View style={styles.vazio}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : conversasFiltradas.length === 0 ? (
         <View style={styles.vazio}>
           <Ionicons name="chatbubbles-outline" size={56} color={COLORS.border} />
           <Text style={styles.vazioText}>Nenhuma conversa encontrada</Text>

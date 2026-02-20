@@ -31,6 +31,10 @@ expo_out.txt
 .DS_Store
 Thumbs.db
 
+# Google Drive for Desktop (arquivos temporários de sincronização)
+*.tmp.driveupload
+*.tmp.drivedownload
+
 # IDEs
 .vscode/settings.json
 .idea/

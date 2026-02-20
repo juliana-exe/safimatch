@@ -1,5 +1,6 @@
 // src/screens/ConfiguracaoScreen.js - Safimatch
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -503,30 +504,32 @@ export default function ConfiguracaoScreen({ navigation }) {
   const [modalEmail, setModalEmail] = useState(false);
   const [modalSenha, setModalSenha] = useState(false);
 
-  // ── Carregar dados reais ──────────────────────────────────────────────────
-  useEffect(() => {
-    const carregar = async () => {
-      setCarregando(true);
-      try {
-        const [resPerfil, resConfig, sessaoResp] = await Promise.all([
-          obterMeuPerfil(),
-          obterConfiguracoes(),
-          supabase.auth.getSession(),   // sem rede — lê localStorage
-        ]);
-        if (resPerfil.sucesso) setPerfil(resPerfil.perfil);
-        if (resConfig.sucesso && resConfig.config) {
-          setConfig((prev) => ({ ...prev, ...resConfig.config }));
+  // ── Carregar dados reais (recarrega ao focar a aba) ─────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      const carregar = async () => {
+        setCarregando(true);
+        try {
+          const [resPerfil, resConfig, sessaoResp] = await Promise.all([
+            obterMeuPerfil(),
+            obterConfiguracoes(),
+            supabase.auth.getSession(),   // sem rede — lê localStorage
+          ]);
+          if (resPerfil.sucesso) setPerfil(resPerfil.perfil);
+          if (resConfig.sucesso && resConfig.config) {
+            setConfig((prev) => ({ ...prev, ...resConfig.config }));
+          }
+          const user = sessaoResp.data?.session?.user;
+          if (user) setEmail(user.email || '');
+        } catch (e) {
+          console.warn('ConfiguracaoScreen: erro ao carregar', e);
+        } finally {
+          setCarregando(false);
         }
-        const user = sessaoResp.data?.session?.user;
-        if (user) setEmail(user.email || '');
-      } catch (e) {
-        console.warn('ConfiguracaoScreen: erro ao carregar', e);
-      } finally {
-        setCarregando(false);
-      }
-    };
-    carregar();
-  }, []);
+      };
+      carregar();
+    }, [])
+  );
 
   // ── Auto-salvar configurações ────────────────────────────────────────────
   const salvarConfig = useCallback(async (novosValores) => {

@@ -112,6 +112,7 @@ services:
       APP_NAME: realtime
       FLY_APP_NAME: realtime
       MAX_HEADER_LENGTH: 4096
+      SEED_SELF_HOST: "true"
     networks:
       - safimatch
 
@@ -130,13 +131,13 @@ services:
       TENANT_ID: stub
       REGION: ${STORAGE_REGION:-us-east-1}
       GLOBAL_S3_BUCKET: ${STORAGE_BUCKET:-safimatch}
-      POSTGRES_CONNECTION: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      POSTGRES_CONNECTION: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}?options=-c%20search_path%3Dstorage
       PGOPTIONS: "-c search_path=storage"
       FILE_SIZE_LIMIT: 52428800   # 50 MB
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
       IS_MULTITENANT: "false"
-      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}?options=-c%20search_path%3Dstorage
       JWT_SECRET: ${JWT_SECRET}
       PGRST_JWT_SECRET: ${JWT_SECRET}
       UPLOAD_FILE_SIZE_LIMIT: 52428800
