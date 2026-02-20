@@ -229,7 +229,7 @@ services:
       NODE_ENV: development
       NODE_OPTIONS: "--max-old-space-size=4096"
       # ── Supabase (injetado no bundle pelo Metro em tempo de execução)
-      EXPO_PUBLIC_SUPABASE_URL: "http://localhost:8000"
+      EXPO_PUBLIC_SUPABASE_URL: "http://10.31.1.103:8000"
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "${ANON_KEY}"
     volumes:
       # Monta o código-fonte → hot reload automático

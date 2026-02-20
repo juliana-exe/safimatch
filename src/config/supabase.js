@@ -12,9 +12,7 @@ const LOCAL_IP = '10.31.1.103';
 
 const SUPABASE_URL =
   process.env.EXPO_PUBLIC_SUPABASE_URL ||
-  (Platform.OS === 'web'
-    ? 'http://localhost:8000'
-    : `http://${LOCAL_IP}:8000`);
+  `http://${LOCAL_IP}:8000`;
 
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
