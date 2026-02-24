@@ -5,14 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
 // ================================================================
-// CONFIGURAÇÃO
-// Altere estas URLs após subir o Docker (docker-compose up)
+// CONFIGURAÇÃO — Supabase Cloud
 // ================================================================
-const LOCAL_IP = '192.168.100.59';
-
-const SUPABASE_URL =
-  process.env.EXPO_PUBLIC_SUPABASE_URL ||
-  `http://${LOCAL_IP}:8000`;
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 

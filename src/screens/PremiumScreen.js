@@ -19,8 +19,8 @@ import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../config/supabase';
 
-// URL base da premium-api (Docker expõe na porta 3001)
-const PREMIUM_API = process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'http://192.168.100.59:3001';
+// URL base da premium-api (Fly.io)
+const PREMIUM_API = process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'https://safimatch-premium-api.fly.dev';
 
 const PLANOS = [
   { id: 'mensal',     label: 'Mensal',     preco: 'R$ 9,90',  periodo: '/mês',   sub: null,             badge: null,               centavos: 990  },

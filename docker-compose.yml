@@ -289,15 +289,13 @@ services:
     ports:
       - "3001:3001"
     environment:
-      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}  # Token de produção MP: mercadopago.com.br → Suas integrações → Credenciais → Access Token
-      SUPABASE_URL: http://kong:8000                # URL interna do Kong (dentro do Docker)
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
+      SUPABASE_URL: ${SUPABASE_URL:-https://nujzwirwcdlkytgldfsp.supabase.co}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       JWT_SECRET: ${JWT_SECRET}
     networks:
       - safimatch
-    depends_on:
-      - kong
-      - db
+    depends_on: []
 
 volumes:
   db-data:
