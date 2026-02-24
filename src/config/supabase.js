@@ -13,7 +13,7 @@ const SUPABASE_URL =
 
 const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51anp3aXJ3Y2Rsa3l0Z2xkZnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4OTc5NTIsImV4cCI6MjA4NzQ3Mzk1Mn0.Rbtx2XoPN9Mks9kU2qLNwNFPXGCwCNRLkc0ynld7wKc';
+  'sb_publishable_7kBrEPAMyipnh4jtqwHaKw_NZ-E7Gzd';
 
 if (!SUPABASE_ANON_KEY) {
   throw new Error('[supabase.js] SUPABASE_ANON_KEY não definida.');
