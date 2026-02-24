@@ -1,0 +1,103 @@
+════════════════════════════════════════════════
+  SAFIMATCH — FICHA COMPLETA PARA A PLAY STORE
+════════════════════════════════════════════════
+
+── NOME DO APP ──────────────────────────────────
+Safimatch - Namoro em Rondônia
+
+── DESCRIÇÃO CURTA (até 80 caracteres) ──────────
+Encontre sua metade em Rondônia. Matches, chats e conexões reais! 💕
+
+── DESCRIÇÃO LONGA (até 4000 caracteres) ────────
+💕 Safimatch — O app de relacionamentos feito para Rondônia
+
+Cansado de apps genéricos onde ninguém é da sua cidade?
+O Safimatch foi criado especialmente para quem vive em Rondônia e quer encontrar conexões reais, próximas e autênticas.
+
+✨ O QUE VOCÊ VAI ENCONTRAR:
+
+❤️ Matches Inteligentes
+Dê like nas pessoas que te interessam e aguarde o match mútuo. Quando os dois curtem, a conversa começa!
+
+💬 Chat em Tempo Real
+Converse com seus matches diretamente no app com mensagens instantâneas e seguras.
+
+📸 Perfil Completo
+Adicione fotos, escreva sobre você, informe sua cidade em Rondônia e conte o que você busca.
+
+⚡ Safimatch Premium
+Quer se destacar ainda mais? Com o Premium você tem:
+• Superlike ilimitado — mostre interesse especial
+• Desfazer curtidinhas — voltou arrependido? Sem problema
+• Boost — seu perfil aparece primeiro para mais pessoas
+• Pagamento fácil via Pix
+
+🔒 Segurança em Primeiro Lugar
+• Denúncias e bloqueios integrados
+• Moderação ativa
+• Seus dados são protegidos
+
+🌎 Feito para Rondônia
+Seja em Porto Velho, Ji-Paraná, Ariquemes, Cacoal ou qualquer cidade do estado — o Safimatch é para você.
+
+Baixe agora e encontre sua conexão! 💕
+
+── CATEGORIA ────────────────────────────────────
+Social → Namoro
+
+── CLASSIFICAÇÃO ETÁRIA ─────────────────────────
+16+ (Conteúdo para adultos jovens, sem conteúdo explícito)
+
+── TAGS / PALAVRAS-CHAVE ────────────────────────
+namoro, relacionamento, match, rondônia, porto velho, amor, chat, dating
+
+── POLÍTICA DE PRIVACIDADE ──────────────────────
+(Você precisará de uma URL de política de privacidade — veja abaixo)
+
+── ASSETS NECESSÁRIOS ───────────────────────────
+✅ Ícone 512×512       → assets/icon-512.png
+✅ Feature Graphic     → assets/feature-graphic.png  (1024×500)
+⚠️  Screenshots         → mínimo 2, idealmente 4-6 telas do app
+
+── SCREENSHOTS SUGERIDAS ────────────────────────
+1. Tela de Descoberta (cards de perfis)
+2. Tela de Chat
+3. Tela de Perfil
+4. Tela Premium (planos)
+5. Tela de Login/Splash
+
+════════════════════════════════════════════════
+  POLÍTICA DE PRIVACIDADE (OBRIGATÓRIA)
+════════════════════════════════════════════════
+A Play Store exige uma URL pública com a política.
+Opção gratuita: crie em https://www.privacypolicygenerator.info/
+ou use o template abaixo como base:
+
+POLÍTICA DE PRIVACIDADE — SAFIMATCH
+Última atualização: fevereiro de 2026
+
+1. DADOS COLETADOS
+   • Nome, e-mail, data de nascimento
+   • Fotos de perfil (armazenadas com segurança)
+   • Localização (cidade — não rastreamento em tempo real)
+   • Mensagens entre usuários
+
+2. USO DOS DADOS
+   • Exibir seu perfil para possíveis matches
+   • Enviar e receber mensagens
+   • Processar pagamentos Premium (via Mercado Pago)
+
+3. COMPARTILHAMENTO
+   • Não vendemos seus dados a terceiros
+   • Dados de pagamento processados pelo Mercado Pago
+
+4. SEGURANÇA
+   • Dados criptografados via Supabase
+   • Senhas nunca armazenadas em texto simples
+
+5. SEUS DIREITOS
+   • Solicitar exclusão da conta e dados pelo app
+   • Entrar em contato: safimatchro@gmail.com
+
+6. CONTATO
+   E-mail: safimatchro@gmail.com
