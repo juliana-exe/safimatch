@@ -8,7 +8,7 @@
 
 const express  = require('express');
 const { createClient } = require('@supabase/supabase-js');
-const jwt      = require('jsonwebtoken');
+const { createRemoteJWKSet, jwtVerify } = require('jose');
 
 const app = express();
 app.use(express.json());
@@ -27,14 +27,18 @@ const {
   MERCADOPAGO_ACCESS_TOKEN,   // Token de produção do Mercado Pago (começa com APP_USR-)
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
-  JWT_SECRET,
   PORT = '3001',
 } = process.env;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !JWT_SECRET) {
-  console.error('[premium-api] ERRO: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY e JWT_SECRET são obrigatórios.');
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('[premium-api] ERRO: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios.');
   process.exit(1);
 }
+
+// JWKS — verifica tokens ECC P-256 emitidos pelo Supabase Auth
+const JWKS = createRemoteJWKSet(
+  new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
+);
 
 // Cliente com service role — ignora RLS (uso exclusivo do servidor)
 const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -50,8 +54,8 @@ const PLANOS = {
 
 const EXPIRA_MINUTOS = 30;
 
-// ── Helper: valida JWT e retorna user_id ──────────────────────────────────────
-function autenticar(req, res) {
+// ── Helper: valida JWT (ECC P-256 via JWKS) e retorna user_id ───────────────
+async function autenticar(req, res) {
   const header = req.headers.authorization ?? '';
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) {
@@ -59,9 +63,10 @@ function autenticar(req, res) {
     return null;
   }
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
-    return decoded.sub; // UUID do usuário
-  } catch {
+    const { payload } = await jwtVerify(token, JWKS, { issuer: 'supabase' });
+    return payload.sub; // UUID do usuário
+  } catch (e) {
+    console.warn('[autenticar] Token inválido:', e.message);
     res.status(401).json({ erro: 'Token inválido ou expirado' });
     return null;
   }
@@ -70,7 +75,7 @@ function autenticar(req, res) {
 // ── POST /premium/criar-cobranca ──────────────────────────────────────────────
 // Cria cobrança Pix no Mercado Pago e salva na tabela pagamentos
 app.post('/premium/criar-cobranca', async (req, res) => {
-  const userId = autenticar(req, res);
+  const userId = await autenticar(req, res);
   if (!userId) return;
 
   if (!MERCADOPAGO_ACCESS_TOKEN) {
