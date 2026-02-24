@@ -11,6 +11,7 @@ import {
   Image,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { buscarPerfisDescoberta } from '../services/perfilService';
 import { curtir, desfazerCurtida } from '../services/matchService';
+import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 32;
@@ -38,10 +40,12 @@ function BotaoAcao({ icone, cor, onPress, tamanho = 56 }) {
 }
 
 export default function DescobertaScreen({ navigation }) {
+  const { perfil: meuPerfil } = useAuth();
   const [perfis, setPerfis] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [matchAtual, setMatchAtual] = useState(null);
   const [ultimaAcao, setUltimaAcao] = useState(null);
+  const [fotoIdx, setFotoIdx] = useState(0);
 
   const FOTO_PLACEHOLDER = 'https://randomuser.me/api/portraits/women/90.jpg';
 
@@ -104,18 +108,30 @@ export default function DescobertaScreen({ navigation }) {
       useNativeDriver: true,
     }).start(() => {
       posicao.setValue({ x: 0, y: 0 });
+      setFotoIdx(0);
       callback && callback();
       setPerfis((prev) => prev.slice(1));
     });
   };
 
+  // Verifica se atingiu o limite diário de curtidas (não-premium: 10/dia)
+  const _verificarLimite = () => {
+    if (!meuPerfil?.premium && (meuPerfil?.curtidas_hoje ?? 0) >= 10) {
+      navigation.navigate('Premium');
+      return true; // bloqueado
+    }
+    return false;
+  };
+
   const swipeRight = async () => {
+    if (_verificarLimite()) return;
     const perfil = perfis[0];
     historicoRef.current.push(perfil);
     setUltimaAcao('like');
     swipe('right', async () => {
       const res = await curtir(perfil.user_id ?? perfil.id, 'like');
-      if (res.houveMutch) setMatchAtual(perfil);
+      if (res?.limite_atingido) { navigation.navigate('Premium'); return; }
+      if (res?.houveMatch) setMatchAtual(perfil);
     });
   };
 
@@ -127,19 +143,45 @@ export default function DescobertaScreen({ navigation }) {
   };
 
   const superLike = () => {
+    // Superlike é recurso exclusivo Premium
+    if (!meuPerfil?.premium) {
+      navigation.navigate('Premium');
+      return;
+    }
+    if (_verificarLimite()) return;
     const perfil = perfis[0];
     historicoRef.current.push(perfil);
     setUltimaAcao('superlike');
-    swipe('right', () => curtir(perfil.user_id ?? perfil.id, 'superlike'));
+    swipe('right', async () => {
+      const res = await curtir(perfil.user_id ?? perfil.id, 'superlike');
+      if (res?.limite_atingido) { navigation.navigate('Premium'); return; }
+      if (res?.houveMatch) setMatchAtual(perfil);
+    });
   };
 
   const desfazer = async () => {
+    // Desfazer é recurso exclusivo Premium
+    if (!meuPerfil?.premium) {
+      navigation.navigate('Premium');
+      return;
+    }
     const ultimo = historicoRef.current.pop();
     if (!ultimo) return;
     await desfazerCurtida(ultimo.user_id ?? ultimo.id);
     setPerfis((prev) => [ultimo, ...prev]);
     setUltimaAcao(null);
   };
+
+  if (carregando) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.semPerfis}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={[styles.semPerfisSubtitle, { marginTop: 16 }]}>Buscando perfis...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (perfis.length === 0) {
     return (
@@ -200,7 +242,36 @@ export default function DescobertaScreen({ navigation }) {
           ]}
           {...panResponder.panHandlers}
         >
-          <Image source={{ uri: perfis[0].fotos[0] }} style={styles.cardImagem} />
+          {/* Toque nas metades esquerda/direita para trocar foto */}
+          <Image source={{ uri: perfis[0].fotos[fotoIdx] ?? perfis[0].fotos[0] }} style={styles.cardImagem} />
+
+          {/* Áreas de toque para navegar entre fotos (sem interferir no swipe) */}
+          {perfis[0].fotos.length > 1 && (
+            <View style={styles.fotoNavArea} pointerEvents="box-none">
+              <TouchableOpacity
+                style={styles.fotoNavLeft}
+                activeOpacity={1}
+                onPress={() => setFotoIdx(i => Math.max(0, i - 1))}
+              />
+              <TouchableOpacity
+                style={styles.fotoNavRight}
+                activeOpacity={1}
+                onPress={() => setFotoIdx(i => Math.min(perfis[0].fotos.length - 1, i + 1))}
+              />
+            </View>
+          )}
+
+          {/* Dots de paginação de fotos */}
+          {perfis[0].fotos.length > 1 && (
+            <View style={styles.fotoDots}>
+              {perfis[0].fotos.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.fotoDot, i === fotoIdx && styles.fotoDotAtivo]}
+                />
+              ))}
+            </View>
+          )}
 
           {/* Badge LIKE */}
           <Animated.View style={[styles.badgeLike, { opacity: opacidadeLike }]}>
@@ -249,7 +320,7 @@ export default function DescobertaScreen({ navigation }) {
         <BotaoAcao icone="close" cor={COLORS.dislike} onPress={swipeLeft} tamanho={64} />
         <BotaoAcao icone="star" cor={COLORS.superLike} onPress={superLike} tamanho={48} />
         <BotaoAcao icone="heart" cor={COLORS.like} onPress={swipeRight} tamanho={64} />
-        <BotaoAcao icone="flash-outline" cor={COLORS.secondary} onPress={() => Alert.alert('Boost ⚡', 'Boost estará disponível no Safimatch Premium! 💜')} tamanho={48} />
+        <BotaoAcao icone="flash-outline" cor={COLORS.secondary} onPress={() => navigation.navigate('Premium')} tamanho={48} />
       </View>
 
       {/* Modal de Match */}
@@ -263,7 +334,10 @@ export default function DescobertaScreen({ navigation }) {
             </Text>
 
             <View style={styles.matchFotos}>
-              <Image source={{ uri: 'https://randomuser.me/api/portraits/women/90.jpg' }} style={styles.matchFoto} />
+              <Image
+                source={{ uri: (meuPerfil?.fotos ?? [])[0] ?? 'https://randomuser.me/api/portraits/women/90.jpg' }}
+                style={styles.matchFoto}
+              />
               <Ionicons name="heart" size={28} color={COLORS.white} style={{ marginHorizontal: -8, zIndex: 1 }} />
               <Image source={{ uri: matchAtual.fotos[0] }} style={styles.matchFoto} />
             </View>
@@ -325,6 +399,34 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   cardImagem: { width: '100%', height: '100%', resizeMode: 'cover' },
+
+  // Navegação de fotos dentro do card
+  fotoNavArea: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    zIndex: 1,
+  },
+  fotoNavLeft: { flex: 1 },
+  fotoNavRight: { flex: 1 },
+
+  // Dots de paginação de fotos
+  fotoDots: {
+    position: 'absolute',
+    top: 10,
+    left: 0, right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
+    zIndex: 2,
+  },
+  fotoDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
+  fotoDotAtivo: {
+    backgroundColor: COLORS.white,
+    width: 18,
+  },
   cardGradient: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: SPACING.md,

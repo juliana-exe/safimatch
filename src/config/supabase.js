@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 // CONFIGURAÇÃO
 // Altere estas URLs após subir o Docker (docker-compose up)
 // ================================================================
-const LOCAL_IP = '10.31.1.103';
+const LOCAL_IP = '192.168.100.59';
 
 const SUPABASE_URL =
   process.env.EXPO_PUBLIC_SUPABASE_URL ||

@@ -40,11 +40,11 @@ export const curtir = async (paraUserId, tipo = 'like') => {
 
     return {
       sucesso: true,
-      houveMutch: !!match,
+      houveMatch: !!match,
       matchId: match?.id ?? null,
     };
   } catch (error) {
-    return { sucesso: false, erro: error.message, houveMutch: false };
+    return { sucesso: false, erro: error.message, houveMatch: false };
   }
 };
 

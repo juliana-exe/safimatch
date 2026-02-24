@@ -6,6 +6,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Switch,
   Alert,
@@ -71,88 +72,20 @@ function Linha({ icone, corIcone = COLORS.primary, titulo, subtitulo, onPress, d
 
 const Sep = () => <View style={styles.separador} />;
 
-// ── Autocomplete de cidades (API IBGE) ────────────────────────────────────────
-function CidadeAutocomplete({ value, onChange }) {
-  const [texto, setTexto] = useState(value || '');
-  const [sugestoes, setSugestoes] = useState([]);
-  const cidadesRef = useRef(null);
-  const timerRef = useRef(null);
-
-  const normalizar = (s) =>
-    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-  const buscar = async (q) => {
-    if (q.length < 2) { setSugestoes([]); return; }
-    if (!cidadesRef.current) {
-      try {
-        const resp = await fetch(
-          'https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome'
-        );
-        cidadesRef.current = (await resp.json()).map((m) => ({
-          nome: m.nome,
-          uf: m.microrregiao.mesorregiao.UF.sigla,
-        }));
-      } catch { return; }
-    }
-    const q2 = normalizar(q);
-    const começa = cidadesRef.current.filter((c) => normalizar(c.nome).startsWith(q2));
-    const contém = cidadesRef.current.filter(
-      (c) => !normalizar(c.nome).startsWith(q2) && normalizar(c.nome).includes(q2)
-    );
-    setSugestoes([...começa, ...contém].slice(0, 7));
-  };
-
-  const handleChange = (v) => {
-    setTexto(v);
-    onChange(v);
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => buscar(v), 300);
-  };
-
-  const selecionar = (c) => {
-    const label = `${c.nome} — ${c.uf}`;
-    setTexto(label);
-    setSugestoes([]);
-    onChange(c.nome);
-  };
-
+// ── Campo de cidade ────────────────────────────────────────────────────────────
+// Apenas um botão — a busca/resultados ficam no ModalEditarPerfil (sem Modal aninhado)
+function CidadeAutocomplete({ value, onPress }) {
   return (
-    <View>
-      <View style={styles.modalInputBox}>
-        <Ionicons name="location-outline" size={18} color={COLORS.textMuted} style={{ marginRight: 8 }} />
-        <TextInput
-          style={styles.modalInput}
-          value={texto}
-          onChangeText={handleChange}
-          placeholder="Sua cidade"
-          placeholderTextColor={COLORS.textMuted}
-          autoCapitalize="words"
-          autoCorrect={false}
-          onBlur={() => { clearTimeout(timerRef.current); setTimeout(() => setSugestoes([]), 250); }}
-        />
-        {texto.length > 0 && (
-          <TouchableOpacity onPress={() => { setTexto(''); setSugestoes([]); onChange(''); }}>
-            <Ionicons name="close-circle" size={17} color={COLORS.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
-      {/* Dropdown inline — funciona dentro de ScrollView em web e mobile */}
-      {sugestoes.length > 0 && (
-        <View style={styles.dropdownInline}>
-          {sugestoes.map((c, i) => (
-            <TouchableOpacity
-              key={`${c.nome}-${c.uf}`}
-              style={[styles.dropItem, i < sugestoes.length - 1 && styles.dropDiv]}
-              onPress={() => selecionar(c)}
-            >
-              <Ionicons name="location-outline" size={13} color={COLORS.primary} style={{ marginRight: 6 }} />
-              <Text style={styles.dropNome}>{c.nome}</Text>
-              <Text style={styles.dropUF}> — {c.uf}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
+    <TouchableOpacity style={styles.modalInputBox} onPress={onPress} activeOpacity={0.7}>
+      <Ionicons name="location-outline" size={18} color={COLORS.textMuted} style={{ marginRight: 8 }} />
+      <Text
+        style={[styles.modalInput, { paddingTop: 2, color: value ? COLORS.textPrimary : COLORS.textMuted }]}
+        numberOfLines={1}
+      >
+        {value || 'Sua cidade'}
+      </Text>
+      <Ionicons name="chevron-forward-outline" size={16} color={COLORS.textMuted} />
+    </TouchableOpacity>
   );
 }
 
@@ -160,20 +93,95 @@ function CidadeAutocomplete({ value, onChange }) {
 // MODAL: EDITAR PERFIL
 // ══════════════════════════════════════════════════════════════════════════════
 function ModalEditarPerfil({ visivel, perfil, onFechar, onSalvar }) {
-  const form = useRef({});
+  const [nome, setNome]         = useState('');
+  const [bio, setBio]           = useState('');
+  const [dataNasc, setDataNasc] = useState(''); // formato DD/MM/AAAA
+  const [cidade, setCidade]     = useState('');
   const [orientacao, setOrientacao] = useState('');
   const [interesses, setInteresses] = useState([]);
-  const [erros, setErros] = useState({});
+  const [erros, setErros]   = useState({});
   const [salvando, setSalvando] = useState(false);
+
+  // ── City Picker (overlay dentro do Modal, sem anidar outro Modal) ────────────
+  const [pickerVis, setPickerVis]           = useState(false);
+  const [pickerQuery, setPickerQuery]       = useState('');
+  const [pickerResults, setPickerResults]   = useState([]);
+  const [pickerBuscando, setPickerBuscando] = useState(false);
+  const pickerTimerRef                      = useRef(null);
+
+  const _norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const _buscarCidade = async (q) => {
+    if (q.length < 2) { setPickerResults([]); return; }
+    setPickerBuscando(true);
+    try {
+      const resp = await fetch(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?nome=${encodeURIComponent(q)}&orderBy=nome`
+      );
+      const data = await resp.json();
+      const q2 = _norm(q);
+      const começa = data.filter((m) => _norm(m.nome).startsWith(q2));
+      const contém = data.filter((m) => !_norm(m.nome).startsWith(q2));
+      setPickerResults([...começa, ...contém].slice(0, 8).map((m) => ({
+        nome: m.nome,
+        uf: m.microrregiao?.mesorregiao?.UF?.sigla ?? '',
+      })));
+    } catch { /* silently fail */ }
+    finally { setPickerBuscando(false); }
+  };
+
+  const handlePickerQuery = (v) => {
+    setPickerQuery(v);
+    clearTimeout(pickerTimerRef.current);
+    pickerTimerRef.current = setTimeout(() => _buscarCidade(v), 400);
+  };
+
+  const abrirPicker = () => {
+    setPickerQuery(cidade || '');
+    setPickerResults([]);
+    setPickerVis(true);
+  };
+
+  const selecionarCidade = (c) => {
+    setCidade(c.nome);
+    setPickerVis(false);
+    setPickerQuery('');
+    setPickerResults([]);
+  };
+
+  // ISO (AAAA-MM-DD) → BR (DD/MM/AAAA)
+  const isoParaBR = (iso) => {
+    if (!iso) return '';
+    const s = iso.split('T')[0];
+    const [a, m, d] = s.split('-');
+    if (!a || !m || !d) return '';
+    return `${d}/${m}/${a}`;
+  };
+
+  // BR (DD/MM/AAAA) → ISO (AAAA-MM-DD)
+  const brParaISO = (br) => {
+    if (!br || br.length < 10) return '';
+    const [d, m, a] = br.split('/');
+    if (!d || !m || !a || a.length < 4) return '';
+    return `${a}-${m}-${d}`;
+  };
+
+  // Máscara automática: digita só números, barras inseridas automaticamente
+  const handleData = (v) => {
+    const digits = v.replace(/\D/g, '').slice(0, 8);
+    let masked = digits;
+    if (digits.length > 2) masked = digits.slice(0, 2) + '/' + digits.slice(2);
+    if (digits.length > 4) masked = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+    setDataNasc(masked);
+    setErros((e) => ({ ...e, dataNasc: '' }));
+  };
 
   useEffect(() => {
     if (visivel && perfil) {
-      form.current = {
-        nome: perfil.nome || '',
-        bio: perfil.bio || '',
-        data_nascimento: perfil.data_nascimento?.split('T')[0] || '',
-        cidade: perfil.cidade || '',
-      };
+      setNome(perfil.nome || '');
+      setBio(perfil.bio || '');
+      setDataNasc(isoParaBR(perfil.data_nascimento));
+      setCidade(perfil.cidade || '');
       setOrientacao(perfil.orientacao || '');
       setInteresses(perfil.interesses || []);
       setErros({});
@@ -186,18 +194,18 @@ function ModalEditarPerfil({ visivel, perfil, onFechar, onSalvar }) {
     );
 
   const salvar = async () => {
-    const f = form.current;
     const e = {};
-    if (!f.nome?.trim()) e.nome = 'Nome obrigatório';
-    if (f.bio && f.bio.length > 300) e.bio = 'Máximo 300 caracteres';
+    if (!nome.trim()) e.nome = 'Nome obrigatório';
+    if (bio && bio.length > 300) e.bio = 'Máximo 300 caracteres';
+    if (dataNasc && dataNasc.length > 0 && dataNasc.length < 10) e.dataNasc = 'Data inválida (use DD/MM/AAAA)';
     if (Object.keys(e).length) { setErros(e); return; }
 
     setSalvando(true);
     const res = await atualizarPerfil({
-      nome: f.nome.trim(),
-      bio: f.bio?.trim() || '',
-      data_nascimento: f.data_nascimento || undefined,
-      cidade: f.cidade?.trim() || '',
+      nome: nome.trim(),
+      bio: bio?.trim() || '',
+      data_nascimento: brParaISO(dataNasc) || undefined,
+      cidade: cidade?.trim() || '',
       orientacao: orientacao || undefined,
       interesses,
     });
@@ -231,8 +239,8 @@ function ModalEditarPerfil({ visivel, perfil, onFechar, onSalvar }) {
               <Ionicons name="person-outline" size={18} color={COLORS.textMuted} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.modalInput}
-                defaultValue={form.current.nome}
-                onChangeText={(v) => { form.current.nome = v; setErros((e) => ({ ...e, nome: '' })); }}
+                value={nome}
+                onChangeText={(v) => { setNome(v); setErros((e) => ({ ...e, nome: '' })); }}
                 placeholder="Seu nome"
                 placeholderTextColor={COLORS.textMuted}
                 autoCorrect={false}
@@ -243,25 +251,26 @@ function ModalEditarPerfil({ visivel, perfil, onFechar, onSalvar }) {
 
             {/* Data de nascimento */}
             <Text style={styles.modalLabel}>Data de nascimento</Text>
-            <View style={styles.modalInputBox}>
+            <View style={[styles.modalInputBox, erros.dataNasc && styles.inputErro]}>
               <Ionicons name="calendar-outline" size={18} color={COLORS.textMuted} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.modalInput}
-                defaultValue={form.current.data_nascimento}
-                onChangeText={(v) => { form.current.data_nascimento = v; }}
-                placeholder="AAAA-MM-DD"
+                value={dataNasc}
+                onChangeText={handleData}
+                placeholder="DD/MM/AAAA"
                 placeholderTextColor={COLORS.textMuted}
                 keyboardType="numeric"
                 autoCorrect={false}
                 maxLength={10}
               />
             </View>
+            {erros.dataNasc ? <Text style={styles.erroMsg}>{erros.dataNasc}</Text> : null}
 
             {/* Cidade */}
             <Text style={styles.modalLabel}>Cidade</Text>
             <CidadeAutocomplete
-              value={form.current.cidade}
-              onChange={(v) => { form.current.cidade = v; }}
+              value={cidade}
+              onPress={abrirPicker}
             />
 
             {/* Bio */}
@@ -271,8 +280,8 @@ function ModalEditarPerfil({ visivel, perfil, onFechar, onSalvar }) {
             <View style={[styles.modalInputBox, { height: 90, alignItems: 'flex-start', paddingTop: 12 }, erros.bio && styles.inputErro]}>
               <TextInput
                 style={[styles.modalInput, { flex: 1 }]}
-                defaultValue={form.current.bio}
-                onChangeText={(v) => { form.current.bio = v; setErros((e) => ({ ...e, bio: '' })); }}
+                value={bio}
+                onChangeText={(v) => { setBio(v); setErros((e) => ({ ...e, bio: '' })); }}
                 placeholder="Conte um pouco sobre você..."
                 placeholderTextColor={COLORS.textMuted}
                 multiline
@@ -317,6 +326,67 @@ function ModalEditarPerfil({ visivel, perfil, onFechar, onSalvar }) {
 
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* ── City Picker: overlay dentro do mesmo Modal, sem anidar outro Modal ── */}
+        {pickerVis && (
+          <View style={[StyleSheet.absoluteFillObject, styles.pickerOverlay]}>
+            {/* Header com voltar + campo de busca */}
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={() => setPickerVis(false)} style={styles.pickerBack}>
+                <Ionicons name="arrow-back" size={22} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+              <View style={styles.pickerSearchBox}>
+                <Ionicons name="search-outline" size={17} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+                <TextInput
+                  style={styles.pickerSearchInput}
+                  value={pickerQuery}
+                  onChangeText={handlePickerQuery}
+                  placeholder="Buscar cidade..."
+                  placeholderTextColor={COLORS.textMuted}
+                  autoFocus
+                  autoCorrect={false}
+                  autoCapitalize="words"
+                />
+                {pickerBuscando
+                  ? <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 4 }} />
+                  : pickerQuery.length > 0
+                    ? <TouchableOpacity onPress={() => { setPickerQuery(''); setPickerResults([]); }}>
+                        <Ionicons name="close-circle" size={17} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    : null}
+              </View>
+            </View>
+            {/* Lista de resultados */}
+            <FlatList
+              data={pickerResults}
+              keyExtractor={(c) => `${c.nome}-${c.uf}`}
+              keyboardShouldPersistTaps="always"
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  style={[styles.pickerItem, index < pickerResults.length - 1 && styles.pickerDiv]}
+                  onPress={() => selecionarCidade(item)}
+                >
+                  <Ionicons name="location-outline" size={16} color={COLORS.primary} style={{ marginRight: 10 }} />
+                  <Text style={styles.pickerItemNome}>{item.nome}</Text>
+                  <Text style={styles.pickerItemUF}> — {item.uf}</Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                pickerQuery.length >= 2 && !pickerBuscando ? (
+                  <View style={styles.pickerEmpty}>
+                    <Ionicons name="search-outline" size={36} color={COLORS.textMuted} />
+                    <Text style={styles.pickerEmptyText}>Nenhuma cidade encontrada</Text>
+                  </View>
+                ) : (
+                  <View style={styles.pickerEmpty}>
+                    <Ionicons name="location-outline" size={36} color={COLORS.textMuted} />
+                    <Text style={styles.pickerEmptyText}>Digite pelo menos 2 letras</Text>
+                  </View>
+                )
+              }
+            />
+          </View>
+        )}
       </SafeAreaView>
     </Modal>
   );
@@ -793,7 +863,7 @@ export default function ConfiguracaoScreen({ navigation }) {
         </Secao>
 
         {/* ── PREMIUM ── */}
-        <TouchableOpacity activeOpacity={0.9} style={styles.premiumArea}>
+        <TouchableOpacity activeOpacity={0.9} style={styles.premiumArea} onPress={() => navigation.navigate('Premium')}>
           <LinearGradient
             colors={['#F57F17', '#FF8F00']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -974,17 +1044,39 @@ const styles = StyleSheet.create({
   forcaBarra: { flex: 1, height: 4, borderRadius: 2, backgroundColor: COLORS.border },
   forcaLabel: { fontSize: 11, marginTop: 4, fontWeight: '600' },
 
-  // Autocomplete dropdown (inline — compatível com ScrollView no web)
-  dropdownInline: {
+  // City Picker overlay (dentro do ModalEditarPerfil, sem Modal aninhado)
+  pickerOverlay: { backgroundColor: COLORS.background, zIndex: 999 },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
     backgroundColor: COLORS.white,
-    borderWidth: 1.5, borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    marginTop: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12, shadowRadius: 8, overflow: 'hidden',
+    gap: 8,
   },
-  dropItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 11 },
-  dropDiv: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  dropNome: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '500' },
-  dropUF: { fontSize: 14, color: COLORS.textMuted },
+  pickerBack: { padding: 4 },
+  pickerSearchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundAlt,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 10,
+    height: 40,
+  },
+  pickerSearchInput: { flex: 1, fontSize: 15, color: COLORS.textPrimary },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+    backgroundColor: COLORS.white,
+  },
+  pickerDiv: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  pickerItemNome: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500', flex: 1 },
+  pickerItemUF: { fontSize: 14, color: COLORS.textMuted },
+  pickerEmpty: { alignItems: 'center', paddingTop: 48, gap: 12 },
+  pickerEmptyText: { fontSize: 15, color: COLORS.textMuted },
 });

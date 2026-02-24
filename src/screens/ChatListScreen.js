@@ -105,9 +105,14 @@ export default function ChatListScreen({ navigation }) {
 
       {/* Novos matches */}
       <View style={styles.matchesSection}>
-        <Text style={styles.sectionTitle}>
-          Novos matches <Text style={styles.matchCount}>{matchesNovos.length}</Text>
-        </Text>
+      <View style={styles.matchesSectionHeader}>
+        <Text style={styles.sectionTitle}>Novos matches</Text>
+        {matchesNovos.length > 0 && (
+          <View style={styles.matchCountBadge}>
+            <Text style={styles.matchCountText}>{matchesNovos.length}</Text>
+          </View>
+        )}
+      </View>
         <FlatList
           data={matchesNovos}
           horizontal
@@ -188,15 +193,21 @@ const styles = StyleSheet.create({
   headerIcon: { padding: 4 },
 
   matchesSection: { marginBottom: SPACING.md },
-  sectionTitle: {
-    fontSize: 14, fontWeight: '700', color: COLORS.textSecondary,
+  matchesSectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: SPACING.lg, marginBottom: 12,
   },
-  matchCount: {
-    color: COLORS.white, backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full, paddingHorizontal: 6, paddingVertical: 1,
-    fontSize: 12,
+  sectionTitle: {
+    fontSize: 14, fontWeight: '700', color: COLORS.textSecondary,
   },
+  matchCountBadge: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    minWidth: 20, height: 20,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  matchCountText: { fontSize: 11, fontWeight: '800', color: COLORS.white },
   matchItem: { alignItems: 'center', gap: 6 },
   matchFotoWrapper: { position: 'relative' },
   matchFoto: {

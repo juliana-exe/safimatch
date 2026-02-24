@@ -17,6 +17,8 @@ import ChatListScreen from '../screens/ChatListScreen';
 import ChatScreen from '../screens/ChatScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import ConfiguracaoScreen from '../screens/ConfiguracaoScreen';
+import VerificacaoScreen from '../screens/VerificacaoScreen';
+import PremiumScreen from '../screens/PremiumScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -160,6 +162,16 @@ export default function RootNavigator() {
               component={ChatScreen}
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name="Verificacao"
+              component={VerificacaoScreen}
+              options={{ animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen
+              name="Premium"
+              component={PremiumScreen}
+              options={{ animation: 'slide_from_bottom' }}
+            />
           </>
         ) : (
           // SEM SESSÃO → fluxo de autenticação
@@ -173,6 +185,11 @@ export default function RootNavigator() {
             <Stack.Screen
               name="Cadastro"
               component={CadastroScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="Verificacao"
+              component={VerificacaoScreen}
               options={{ animation: 'slide_from_right' }}
             />
           </>

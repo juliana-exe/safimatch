@@ -132,6 +132,69 @@ export const excluirConta = async () => {
 };
 
 // ================================================================
+// VERIFICAR OTP DE E-MAIL (após cadastro com confirmação desligada)
+// ================================================================
+export const verificarEmailOTP = async (email, token) => {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'signup',
+    });
+    if (error) throw error;
+    return { sucesso: true, usuario: data.user, sessao: data.session };
+  } catch (error) {
+    return { sucesso: false, erro: _traduzirErro(error) };
+  }
+};
+
+// ================================================================
+// REENVIAR CÓDIGO DE VERIFICAÇÃO POR E-MAIL
+// ================================================================
+export const reenviarOTP = async (email) => {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    if (error) throw error;
+    return { sucesso: true };
+  } catch (error) {
+    return { sucesso: false, erro: _traduzirErro(error) };
+  }
+};
+
+// ================================================================
+// VERIFICAR OTP DE TELEFONE (requer provedor SMS configurado no Supabase)
+// ================================================================
+export const verificarTelefoneOTP = async (phone, token) => {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone,
+      token,
+      type: 'sms',
+    });
+    if (error) throw error;
+    return { sucesso: true, usuario: data.user, sessao: data.session };
+  } catch (error) {
+    return { sucesso: false, erro: _traduzirErro(error) };
+  }
+};
+
+// ================================================================
+// SOLICITAR OTP DE TELEFONE VIA SMS (requer Twilio no Supabase)
+// ================================================================
+export const solicitarOTPTelefone = async (phone) => {
+  try {
+    const { error } = await supabase.auth.signInWithOtp({ phone });
+    if (error) throw error;
+    return { sucesso: true };
+  } catch (error) {
+    return { sucesso: false, erro: _traduzirErro(error) };
+  }
+};
+
+// ================================================================
 // OBTER SESSÃO E USUÁRIA ATUAL
 // ================================================================
 export const obterSessao = async () => {
@@ -159,22 +222,36 @@ export const ouvirMudancasAuth = (callback) => {
 // TRADUÇÃO DE ERROS do Supabase para português
 // ================================================================
 const _traduzirErro = (error) => {
-  const msg = error?.message || '';
+  // GoTrue pode retornar o texto em .message, .error_description ou .msg
+  const msg = (
+    error?.message ||
+    error?.error_description ||
+    error?.msg ||
+    ''
+  ).toLowerCase();
 
-  if (msg.includes('Invalid login credentials'))
+  if (msg.includes('invalid login credentials'))
     return 'E-mail ou senha incorretos.';
-  if (msg.includes('Email not confirmed'))
+  if (msg.includes('email not confirmed'))
     return 'Confirme seu e-mail antes de entrar.';
-  if (msg.includes('User already registered'))
+  if (msg.includes('user already registered'))
     return 'Este e-mail já está cadastrado.';
-  if (msg.includes('Password should be at least'))
+  if (msg.includes('password should be at least'))
     return 'A senha deve ter no mínimo 6 caracteres.';
-  if (msg.includes('Unable to validate email address'))
+  if (msg.includes('unable to validate email address'))
     return 'E-mail inválido.';
-  if (msg.includes('Email rate limit exceeded'))
+  if (msg.includes('email rate limit exceeded'))
     return 'Muitas tentativas. Aguarde alguns minutos.';
-  if (msg.includes('network'))
+  if (msg.includes('token has expired') || msg.includes('otp expired') || msg.includes('token is expired'))
+    return 'Código expirado. Solicite um novo código.';
+  if (msg.includes('invalid otp') || msg.includes('otp has already been used') || msg.includes('token not found'))
+    return 'Código incorreto. Verifique e tente novamente.';
+  if (msg.includes('phone provider') || msg.includes('phone_provider') || msg.includes('unsupported provider'))
+    return 'Verificação por SMS não está configurada. Entre em contato com o suporte.';
+  if (msg.includes('for security purposes') || msg.includes('you can only request this after') || msg.includes('security purposes'))
+    return 'Aguarde alguns segundos antes de tentar novamente.';
+  if (msg.includes('network') || msg.includes('fetch'))
     return 'Erro de conexão. Verifique sua internet.';
 
-  return error?.message || 'Ocorreu um erro inesperado.';
+  return error?.message || error?.error_description || 'Ocorreu um erro inesperado.';
 };

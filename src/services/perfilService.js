@@ -31,7 +31,10 @@ export const obterMeuPerfil = async () => {
       ? Math.floor((Date.now() - new Date(data.data_nascimento).getTime()) / (365.25 * 24 * 3600 * 1000))
       : null;
 
-    return { sucesso: true, perfil: { ...data, idade } };
+    // Calcula completude (campo virtual, não existe no banco)
+    const completude = _calcularCompletude(data);
+
+    return { sucesso: true, perfil: { ...data, idade, completude } };
   } catch (error) {
     console.error('[obterMeuPerfil]', error.message);
     return { sucesso: false, erro: error.message };
@@ -59,28 +62,39 @@ export const obterPerfil = async (userId) => {
 // ================================================================
 // ATUALIZAR PERFIL
 // ================================================================
-export const atualizarPerfil = async (dados) => {
+export const atualizarPerfil = async (dados, sessao = null) => {
   try {
-    const user = await _getUser();
+    let user;
+
+    if (sessao?.access_token) {
+      // Sessão ainda não persistida no AsyncStorage (logo após verifyOtp):
+      // injeta no cliente Supabase para que o PostgREST use o token correto
+      await supabase.auth.setSession({
+        access_token: sessao.access_token,
+        refresh_token: sessao.refresh_token,
+      });
+    }
+
+    user = await _getUser();
     if (!user) throw new Error('Não autenticada');
 
     // Campos permitidos para atualização
     const camposPermitidos = [
       'nome', 'bio', 'data_nascimento', 'cidade', 'estado',
       'orientacao', 'interesses', 'fotos', 'foto_principal',
-      'latitude', 'longitude',
+      'latitude', 'longitude', 'telefone', 'telefone_verificado',
     ];
 
     const dadosFiltrados = Object.fromEntries(
       Object.entries(dados).filter(([k]) => camposPermitidos.includes(k))
     );
 
-    // Calcular completude do perfil
+    // Calcular completude do perfil (apenas para retornar, não persiste no banco)
     const { data: perfilAtual } = await supabase
       .from('perfis').select('*').eq('user_id', user.id).single();
 
     const merged = { ...perfilAtual, ...dadosFiltrados };
-    dadosFiltrados.completude = _calcularCompletude(merged);
+    const completude = _calcularCompletude(merged);
 
     const { data, error } = await supabase
       .from('perfis')
@@ -90,7 +104,7 @@ export const atualizarPerfil = async (dados) => {
       .single();
 
     if (error) throw error;
-    return { sucesso: true, perfil: data };
+    return { sucesso: true, perfil: { ...data, completude } };
   } catch (error) {
     return { sucesso: false, erro: error.message };
   }

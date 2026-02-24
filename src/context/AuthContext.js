@@ -93,6 +93,37 @@ export const AuthProvider = ({ children }) => {
     setPerfil(prev => ({ ...prev, ...novosDados }));
   };
 
+  // Injeta uma sessão já conhecida (ex: retorno do verifyOtp) diretamente no
+  // contexto sem nenhuma chamada de rede. Navegação acontece instantaneamente.
+  const setarSessaoImediata = (s) => {
+    setSessao(s);
+    setUsuario(s?.user ?? null);
+    // Perfil carrega em background sem bloquear
+    if (s?.user) {
+      obterMeuPerfil().then(({ perfil: p }) => { if (p) setPerfil(p); });
+    }
+  };
+
+  // Relê a sessão manualmente — útil após verifyOtp, que às vezes não
+  // dispara onAuthStateChange no React Native com AsyncStorage.
+  // Só  adb -s emulator-5554 shell ping -c 4 192.168.100.59 espera obterSessao() para setar autenticada=true rápido;
+  // o perfil é carregado em background sem bloquear a navegação.
+  const recarregarAuth = async () => {
+    try {
+      const { sessao: s } = await obterSessao();
+      setSessao(s);
+      setUsuario(s?.user ?? null);
+      if (s?.user) {
+        // Não aguarda: perfil carrega em background enquanto o app navega
+        obterMeuPerfil().then(({ perfil: p }) => { if (p) setPerfil(p); });
+      } else {
+        setPerfil(null);
+      }
+    } catch (e) {
+      console.warn('recarregarAuth erro:', e);
+    }
+  };
+
   const value = {
     sessao,
     usuario,
@@ -100,6 +131,8 @@ export const AuthProvider = ({ children }) => {
     carregando,
     autenticada: !!sessao,
     atualizarPerfilLocal,
+    recarregarAuth,
+    setarSessaoImediata,
   };
 
   return (

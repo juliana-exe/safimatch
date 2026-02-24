@@ -200,7 +200,7 @@ export default function PerfilScreen({ navigation }) {
   // Upload com a fonte escolhida (galeria ou câmera)
   const _uploadDaFonte = async (indice, launchFn) => {
     const resultado = await launchFn({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 5],
       quality: 0.85,
@@ -434,6 +434,12 @@ export default function PerfilScreen({ navigation }) {
                 <Text style={styles.verificadaText}>Verificada</Text>
               </View>
             )}
+            {p.premium && (
+              <View style={styles.premiumBadge}>
+                <Text style={styles.premiumBadgeEmoji}>👑</Text>
+                <Text style={styles.premiumBadgeText}>Premium</Text>
+              </View>
+            )}
           </View>
 
           <Text style={styles.nome}>{p.nome}, {p.idade}</Text>
@@ -453,6 +459,41 @@ export default function PerfilScreen({ navigation }) {
             ))}
           </View>
         </View>
+
+        {/* Bloco Premium */}
+        {p.premium ? (
+          <View style={styles.premiumAtivoBox}>
+            <Text style={styles.premiumAtivoEmoji}>👑</Text>
+            <View style={styles.premiumAtivoTextos}>
+              <Text style={styles.premiumAtivoTitulo}>Safimatch Premium ativo</Text>
+              {p.premium_ate && (
+                <Text style={styles.premiumAtivoSub}>
+                  Válido até {new Date(p.premium_ate).toLocaleDateString('pt-BR')}
+                </Text>
+              )}
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.premiumBanner}
+            onPress={() => navigation.navigate('Premium')}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#FFD700', '#FF8C00', '#C2185B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.premiumBannerGradient}
+            >
+              <Text style={styles.premiumBannerEmoji}>👑</Text>
+              <View style={styles.premiumBannerTextos}>
+                <Text style={styles.premiumBannerTitulo}>Assine o Premium</Text>
+                <Text style={styles.premiumBannerSub}>Curtidas ilimitadas · Sem limites</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
         {/* Completude do perfil */}
         <View style={styles.section}>
@@ -566,7 +607,7 @@ export default function PerfilScreen({ navigation }) {
         </View>
 
         {/* Safimatch Premium */}
-        <TouchableOpacity activeOpacity={0.9} style={{ marginHorizontal: SPACING.lg, marginBottom: SPACING.xl }}>
+        <TouchableOpacity activeOpacity={0.9} style={{ marginHorizontal: SPACING.lg, marginBottom: SPACING.xl }} onPress={() => navigation.navigate('Premium')}>
           <LinearGradient
             colors={['#F57F17', '#FF8F00']}
             start={{ x: 0, y: 0 }}
@@ -630,6 +671,41 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full, position: 'absolute', top: -4, left: -30,
   },
   verificadaText: { fontSize: 10, color: '#1565C0', fontWeight: '700' },
+  premiumBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#FFF8E1', paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: RADIUS.full, position: 'absolute', top: -4, right: -30,
+    borderWidth: 1, borderColor: '#FFD700',
+  },
+  premiumBadgeEmoji: { fontSize: 10 },
+  premiumBadgeText: { fontSize: 10, color: '#E65100', fontWeight: '700' },
+
+  // Bloco premium no perfil
+  premiumAtivoBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 20, marginBottom: 4,
+    backgroundColor: '#FFF8E1', borderRadius: 14,
+    borderWidth: 1.5, borderColor: '#FFD700',
+    padding: 14,
+  },
+  premiumAtivoEmoji: { fontSize: 28 },
+  premiumAtivoTextos: { flex: 1 },
+  premiumAtivoTitulo: { fontSize: 15, fontWeight: '700', color: '#E65100' },
+  premiumAtivoSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  premiumBanner: {
+    marginHorizontal: 20,
+    marginBottom: 4,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  premiumBannerGradient: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
+  },
+  premiumBannerEmoji: { fontSize: 26 },
+  premiumBannerTextos: { flex: 1 },
+  premiumBannerTitulo: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  premiumBannerSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   nome: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
   cidadeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   cidade: { fontSize: 13, color: COLORS.textMuted },

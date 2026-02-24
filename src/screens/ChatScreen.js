@@ -46,6 +46,8 @@ export default function ChatScreen({ navigation, route }) {
       const { mensagens: lista } = await obterMensagens(matchId);
       setMensagens(lista ?? []);
       if (outraUserId) await marcarComoLidas(matchId, outraUserId);
+      // Garante scroll ao fim após render das mensagens
+      setTimeout(() => listaRef.current?.scrollToEnd({ animated: false }), 150);
     };
     carregar();
   }, [matchId]);
@@ -58,6 +60,10 @@ export default function ChatScreen({ navigation, route }) {
         if (prev.find(m => m.id === nova.id)) return prev;
         return [...prev, nova];
       });
+      // Marca como lida se a mensagem for da outra usuária
+      if (nova.de_user_id !== meuId && outraUserId) {
+        marcarComoLidas(matchId, outraUserId);
+      }
       setTimeout(() => listaRef.current?.scrollToEnd({ animated: true }), 100);
     });
     return cancelar;
@@ -87,7 +93,7 @@ export default function ChatScreen({ navigation, route }) {
         : ImagePicker.launchImageLibraryAsync;
 
       const resultado = await launch({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.85,
       });
@@ -216,7 +222,7 @@ export default function ChatScreen({ navigation, route }) {
               </TouchableOpacity>
               <View style={styles.fotoUnicaBadgeSender}>
                 <Ionicons name="eye-off-outline" size={11} color="#fff" />
-                <Text style={styles.fotoUnicaBadgeText}>Une vez</Text>
+                <Text style={styles.fotoUnicaBadgeText}>Uma vez</Text>
               </View>
               <Text style={[styles.msgHora, styles.fotoHora, styles.msgHoraMinha]}>
                 {hora} ✓✓
@@ -293,11 +299,14 @@ export default function ChatScreen({ navigation, route }) {
               source={{ uri: conversa?.foto || 'https://randomuser.me/api/portraits/women/68.jpg' }}
               style={styles.headerFoto}
             />
-            <View style={styles.onlineDot} />
+            {conversa?.perfil_dela?.online_agora && <View style={styles.onlineDot} />}
           </View>
           <View>
             <Text style={styles.headerNome}>{conversa?.nome || 'Ana Lima'}</Text>
-            <Text style={styles.headerStatus}>Online agora</Text>
+            {conversa?.perfil_dela?.online_agora
+              ? <Text style={styles.headerStatus}>Online agora</Text>
+              : <Text style={styles.headerStatusOffline}>Offline</Text>
+            }
           </View>
         </TouchableOpacity>
 
@@ -323,13 +332,15 @@ export default function ChatScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Match banner */}
-      <View style={styles.matchBanner}>
-        <Ionicons name="heart" size={14} color={COLORS.primary} />
-        <Text style={styles.matchBannerText}>
-          Vocês deram match! Comece a conversa 💜
-        </Text>
-      </View>
+      {/* Match banner — aparece apenas antes da primeira mensagem */}
+      {mensagens.length === 0 && (
+        <View style={styles.matchBanner}>
+          <Ionicons name="heart" size={14} color={COLORS.primary} />
+          <Text style={styles.matchBannerText}>
+            Vocês deram match! Comece a conversa 💜
+          </Text>
+        </View>
+      )}
 
       {/* Mensagens */}
       <KeyboardAvoidingView
@@ -343,22 +354,23 @@ export default function ChatScreen({ navigation, route }) {
           keyExtractor={(item) => item.id}
           renderItem={renderMensagem}
           contentContainerStyle={styles.lista}
-          onLayout={() => listaRef.current?.scrollToEnd({ animated: false })}
           showsVerticalScrollIndicator={false}
         />
 
-        {/* Sugestões de resposta rápida */}
-        <View style={styles.sugestoesRow}>
-          {['Oi! 😊', 'Que legal!', 'Me conta mais...'].map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={styles.sugestao}
-              onPress={() => setTexto(s)}
-            >
-              <Text style={styles.sugestaoText}>{s}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Sugestões de resposta rápida — só antes da primeira mensagem */}
+        {mensagens.length === 0 && (
+          <View style={styles.sugestoesRow}>
+            {['Oi! 😊', 'Que legal!', 'Me conta mais...'].map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={styles.sugestao}
+                onPress={() => setTexto(s)}
+              >
+                <Text style={styles.sugestaoText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Input de mensagem */}
         <View style={styles.inputArea}>
@@ -455,6 +467,7 @@ const styles = StyleSheet.create({
   },
   headerNome: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   headerStatus: { fontSize: 11, color: '#4CAF50', fontWeight: '600' },
+  headerStatusOffline: { fontSize: 11, color: COLORS.textMuted, fontWeight: '500' },
   headerAcoes: { flexDirection: 'row', gap: 4 },
   headerIconBtn: { padding: 6 },
 

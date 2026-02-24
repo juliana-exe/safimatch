@@ -49,6 +49,11 @@ const CONTAS = [
     orientacao: 'lesbica',
     interesses: ['Viagem', 'Música', 'Fotografia'],
     latitude: -23.5505, longitude: -46.6333,
+    foto_principal: 'https://randomuser.me/api/portraits/women/44.jpg',
+    fotos: [
+      'https://randomuser.me/api/portraits/women/44.jpg',
+      'https://randomuser.me/api/portraits/women/45.jpg',
+    ],
   },
   {
     email: 'beatriz@safimatch.test',
@@ -60,6 +65,11 @@ const CONTAS = [
     orientacao: 'bissexual',
     interesses: ['Arte', 'Cinema', 'Culinária'],
     latitude: -22.9068, longitude: -43.1729,
+    foto_principal: 'https://randomuser.me/api/portraits/women/68.jpg',
+    fotos: [
+      'https://randomuser.me/api/portraits/women/68.jpg',
+      'https://randomuser.me/api/portraits/women/69.jpg',
+    ],
   },
   {
     email: 'camila@safimatch.test',
@@ -71,6 +81,11 @@ const CONTAS = [
     orientacao: 'pansexual',
     interesses: ['Yoga', 'Esportes', 'Natureza'],
     latitude: -19.9167, longitude: -43.9345,
+    foto_principal: 'https://randomuser.me/api/portraits/women/32.jpg',
+    fotos: [
+      'https://randomuser.me/api/portraits/women/32.jpg',
+      'https://randomuser.me/api/portraits/women/33.jpg',
+    ],
   },
   {
     email: 'daniela@safimatch.test',
@@ -82,6 +97,11 @@ const CONTAS = [
     orientacao: 'lesbica',
     interesses: ['Leitura', 'Música', 'Arte'],
     latitude: -25.4290, longitude: -49.2671,
+    foto_principal: 'https://randomuser.me/api/portraits/women/55.jpg',
+    fotos: [
+      'https://randomuser.me/api/portraits/women/55.jpg',
+      'https://randomuser.me/api/portraits/women/56.jpg',
+    ],
   },
   {
     email: 'elisa@safimatch.test',
@@ -93,6 +113,11 @@ const CONTAS = [
     orientacao: 'bissexual',
     interesses: ['Tecnologia', 'Gaming', 'Cinema'],
     latitude: -30.0346, longitude: -51.2177,
+    foto_principal: 'https://randomuser.me/api/portraits/women/21.jpg',
+    fotos: [
+      'https://randomuser.me/api/portraits/women/21.jpg',
+      'https://randomuser.me/api/portraits/women/22.jpg',
+    ],
   },
 ];
 
@@ -146,6 +171,8 @@ async function atualizarPerfil(userId, conta) {
     interesses:       conta.interesses,
     latitude:         conta.latitude,
     longitude:        conta.longitude,
+    foto_principal:   conta.foto_principal,
+    fotos:            conta.fotos,
     atualizado_em:    new Date().toISOString(),
   });
   if (status >= 400) throw new Error(`Perfil ${conta.email}: ${JSON.stringify(data)}`);
@@ -173,11 +200,14 @@ async function criarMensagem(matchId, deId, conteudo) {
 
 // ─── Buscar match entre duas usuárias ────────────────────────────
 async function buscarMatch(idA, idB) {
+  // Tenta as duas combinações de ordem (LEAST/GREATEST no trigger)
+  const menor = idA < idB ? idA : idB;
+  const maior = idA < idB ? idB : idA;
   const { data } = await req(
     'GET',
-    `/rest/v1/matches?or=(and(usuario_a_id.eq.${idA},usuario_b_id.eq.${idB}),and(usuario_a_id.eq.${idB},usuario_b_id.eq.${idA}))`
+    `/rest/v1/matches?usuario_a_id=eq.${menor}&usuario_b_id=eq.${maior}&limit=1`
   );
-  return Array.isArray(data) ? data[0] : null;
+  return Array.isArray(data) && data.length > 0 ? data[0] : null;
 }
 
 // ═══════════════════════════════════════════════════════════════════

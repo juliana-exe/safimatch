@@ -29,9 +29,31 @@ services:
       JWT_EXP: ${JWT_EXPIRY:-3600}
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
     networks:
       - safimatch
+
+  # ── Migrate (aplica migrations customizadas após o DB estar pronto) ──
+  migrate:
+    image: postgres:15-alpine
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    networks:
+      - safimatch
+    command: >
+      sh -c "
+        echo 'Aplicando migrations...' &&
+        for f in /migrations/*.sql; do
+          echo \"→ $$f\" &&
+          psql -h db -U postgres -d ${POSTGRES_DB:-postgres} -f \"$$f\" || true;
+        done &&
+        echo 'Migrations concluídas.'
+      "
 
   # ── GoTrue (Auth) ────────────────────────────────────────────
   auth:
@@ -40,6 +62,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -55,18 +79,20 @@ services:
       GOTRUE_JWT_DEFAULT_EXP: ${JWT_EXPIRY:-3600}
       GOTRUE_JWT_SECRET: ${JWT_SECRET}
       GOTRUE_EXTERNAL_EMAIL_ENABLED: true
-      GOTRUE_MAILER_AUTOCONFIRM: true
-      GOTRUE_SMTP_HOST: ${SMTP_HOST}
-      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
-      GOTRUE_SMTP_USER: ${SMTP_USER}
-      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_MAILER_AUTOCONFIRM: false          # OTP ativado: e-mails requerem confirmação
+      GOTRUE_SMTP_HOST: mailpit                 # Mailpit local (sem autenticação)
+      GOTRUE_SMTP_PORT: 1025
+      GOTRUE_SMTP_USER: ""                      # Mailpit não requer credenciais
+      GOTRUE_SMTP_PASS: ""
       GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
       GOTRUE_MAILER_URLPATHS_INVITE: ${MAILER_URLPATHS_INVITE:-/auth/v1/verify}
       GOTRUE_MAILER_URLPATHS_CONFIRMATION: ${MAILER_URLPATHS_CONFIRMATION:-/auth/v1/verify}
       GOTRUE_MAILER_URLPATHS_RECOVERY: ${MAILER_URLPATHS_RECOVERY:-/auth/v1/verify}
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: ${MAILER_URLPATHS_EMAIL_CHANGE:-/auth/v1/verify}
       GOTRUE_RATE_LIMIT_HEADER: X-Forwarded-For
-      GOTRUE_RATE_LIMIT_EMAIL_SENT: 2
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: 100          # dev: sem restrição prática
+      GOTRUE_OTP_EXP: 600                        # OTP válido por 10 minutos
+      GOTRUE_SECURITY_CAPTCHA_ENABLED: "false"   # sem captcha em dev
     networks:
       - safimatch
 
@@ -191,7 +217,15 @@ services:
       NEXT_PUBLIC_ENABLE_LOGS: "true"
     networks:
       - safimatch
-
+  # ── Mailpit (servidor SMTP local para capturar e-mails em dev) ───
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP (GoTrue envia aqui)
+      - "8025:8025"   # UI web para ver e-mails recebidos
+    networks:
+      - safimatch
   # ── pg-meta (metadata do banco para o Studio) ─────────────────
   meta:
     image: supabase/postgres-meta:v0.80.0
@@ -229,8 +263,9 @@ services:
       NODE_ENV: development
       NODE_OPTIONS: "--max-old-space-size=4096"
       # ── Supabase (injetado no bundle pelo Metro em tempo de execução)
-      EXPO_PUBLIC_SUPABASE_URL: "http://10.31.1.103:8000"
+      EXPO_PUBLIC_SUPABASE_URL: "http://192.168.100.59:8000"
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "${ANON_KEY}"
+      EXPO_PUBLIC_PREMIUM_API_URL: "http://192.168.100.59:3001"
     volumes:
       # Monta o código-fonte → hot reload automático
       - .:/app
@@ -245,6 +280,24 @@ services:
       - kong
     command: >  
       npx expo start --web --port 8081 --host lan
+
+  # ── Premium API (cobrança Pix automática via OpenPix) ────────
+  premium-api:
+    build:
+      context: ./backend/premium-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}  # Token de produção MP: mercadopago.com.br → Suas integrações → Credenciais → Access Token
+      SUPABASE_URL: http://kong:8000                # URL interna do Kong (dentro do Docker)
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - safimatch
+    depends_on:
+      - kong
+      - db
 
 volumes:
   db-data:
