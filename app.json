@@ -33,7 +33,6 @@
         "com.android.vending.BILLING"
       ]
     },
-    "newArchEnabled": false,
     "web": {
       "bundler": "metro",
       "output": "single",
