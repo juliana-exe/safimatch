@@ -29,9 +29,11 @@
         "android.permission.INTERNET",
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "com.android.vending.BILLING"
       ]
     },
+    "newArchEnabled": false,
     "web": {
       "bundler": "metro",
       "output": "single",
@@ -40,7 +42,8 @@
     "plugins": [
       "expo-image-picker",
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "react-native-iap"
     ],
     "extra": {
       "eas": {
