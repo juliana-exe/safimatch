@@ -1,5 +1,5 @@
 // src/services/billingService.js
-// Gerencia assinaturas via Google Play Billing (react-native-iap v14)
+// Gerencia assinaturas via Google Play Billing (react-native-iap v12)
 
 import { Platform } from 'react-native';
 import {
