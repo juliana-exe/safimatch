@@ -21,6 +21,7 @@ import { buscarPerfisDescoberta } from '../services/perfilService';
 import { curtir, desfazerCurtida } from '../services/matchService';
 import { obterBonusAtivo, rolarBonus, consumirBonus } from '../services/bonusService';
 import { useAuth } from '../context/AuthContext';
+import AvatarPessoa from '../components/AvatarPessoa';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 32;
@@ -260,7 +261,7 @@ export default function DescobertaScreen({ navigation }) {
           <Text style={styles.headerTitle}>Safimatch</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity style={styles.headerIcon} onPress={() => Alert.alert('Filtros', 'Ajuste seus filtros de descoberta em Ajustes → Filtros de Descoberta.')}>
+          <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.navigate('Configuracoes')}>
             <Ionicons name="options-outline" size={24} color={COLORS.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -380,7 +381,15 @@ export default function DescobertaScreen({ navigation }) {
         <BotaoAcao icone="close" cor={COLORS.dislike} onPress={swipeLeft} tamanho={64} />
         <BotaoAcao icone="star" cor={COLORS.superLike} onPress={superLike} tamanho={48} badge={bonusSuperlike || null} />
         <BotaoAcao icone="heart" cor={COLORS.like} onPress={swipeRight} tamanho={64} />
-        <BotaoAcao icone="flash-outline" cor={COLORS.secondary} onPress={() => navigation.navigate('Premium')} tamanho={48} />
+        <BotaoAcao icone="flash-outline" cor={COLORS.secondary} tamanho={48}
+          onPress={() => {
+            if (meuPerfil?.premium) {
+              Alert.alert('Safimatch Premium ✨', 'Você já tem o plano Premium ativo! Aproveite curtidas ilimitadas e muito mais 💜');
+            } else {
+              navigation.navigate('Premium');
+            }
+          }}
+        />
       </View>
 
       {/* Modal de Match */}
@@ -394,8 +403,8 @@ export default function DescobertaScreen({ navigation }) {
             </Text>
 
             <View style={styles.matchFotos}>
-              <Image
-                source={{ uri: (meuPerfil?.fotos ?? [])[0] ?? 'https://randomuser.me/api/portraits/women/90.jpg' }}
+              <AvatarPessoa
+                uri={(meuPerfil?.fotos ?? [])[0]}
                 style={styles.matchFoto}
               />
               <Ionicons name="heart" size={28} color={COLORS.white} style={{ marginHorizontal: -8, zIndex: 1 }} />

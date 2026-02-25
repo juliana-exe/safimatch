@@ -22,6 +22,7 @@ import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { obterMeuPerfil, atualizarPerfil } from '../services/perfilService';
 import { uploadFoto, removerFotoSlot } from '../services/storageService';
 import { useAuth } from '../context/AuthContext';
+import AvatarPessoa from '../components/AvatarPessoa';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const FOTO_SIZE = (SCREEN_W - 48 - 8) / 3;
@@ -399,8 +400,8 @@ export default function PerfilScreen({ navigation }) {
         <View style={styles.perfilCard}>
           <View style={styles.avatarArea}>
             <TouchableOpacity onPress={tocarAvatar} disabled={enviandoFoto} activeOpacity={0.85}>
-              <Image
-                source={{ uri: (p.fotos ?? [])[0] ?? 'https://randomuser.me/api/portraits/women/90.jpg' }}
+              <AvatarPessoa
+                uri={(p.fotos ?? [])[0]}
                 style={styles.avatarImg}
               />
               {/* Overlay escuro suave ao toque para indicar que é clicável */}

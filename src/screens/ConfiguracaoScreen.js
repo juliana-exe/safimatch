@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -686,9 +687,20 @@ export default function ConfiguracaoScreen({ navigation }) {
           />
           <Sep />
           <Linha
-            icone="shield-checkmark-outline" titulo="Verificação de identidade"
-            subtitulo="Mostre que você é real ✓"
-            corIcone="#1565C0"
+            icone={perfil?.status_verificacao === 'aprovada' ? 'shield-checkmark' : 'shield-checkmark-outline'}
+            titulo="Verificação de identidade"
+            subtitulo={
+              perfil?.status_verificacao === 'aprovada' ? '✅ Verificada — identidade confirmada' :
+              perfil?.status_verificacao === 'pendente'  ? '⏳ Pendente · aguardando análise' :
+              perfil?.status_verificacao === 'rejeitada' ? '❌ Rejeitada · envie novamente' :
+              'Mostre que você é real 🔍'
+            }
+            corIcone={
+              perfil?.status_verificacao === 'aprovada' ? '#2E7D32' :
+              perfil?.status_verificacao === 'pendente'  ? '#E65100' :
+              perfil?.status_verificacao === 'rejeitada' ? '#B71C1C' :
+              '#1565C0'
+            }
             onPress={() => navigation.navigate('VerificacaoIdentidade')}
           />
         </Secao>
@@ -870,7 +882,7 @@ export default function ConfiguracaoScreen({ navigation }) {
           <Sep />
           <Linha
             icone="document-text-outline" titulo="Termos e Privacidade"
-            onPress={() => Alert.alert('Termos', 'Disponível em safimatch.com/termos')}
+            onPress={() => Linking.openURL('https://juliana-exe.github.io/safimatch/privacy-policy.html')}
           />
         </Secao>
 

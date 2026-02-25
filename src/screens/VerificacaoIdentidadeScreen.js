@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Image, ScrollView, ActivityIndicator, Alert,
+  Image, ScrollView, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -243,7 +243,13 @@ export default function VerificacaoIdentidadeScreen({ navigation }) {
 
             {/* Aviso de privacidade */}
             <Text style={styles.privacidade}>
-              🔒 Sua selfie é armazenada de forma segura e usada exclusivamente para verificação manual. Não é compartilhada nem processada por IA.
+              🔒 Sua selfie é armazenada de forma segura e usada exclusivamente para verificação manual. Não é compartilhada nem processada por IA.{' '}
+              <Text
+                style={{ color: COLORS.primary, textDecorationLine: 'underline' }}
+                onPress={() => Linking.openURL('https://juliana-exe.github.io/safimatch/privacy-policy.html')}
+              >
+                Ver política de privacidade
+              </Text>
             </Text>
           </>
         )}

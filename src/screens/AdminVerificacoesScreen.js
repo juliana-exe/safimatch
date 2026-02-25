@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
+import AvatarPessoa from '../components/AvatarPessoa';
 
 export default function AdminVerificacoesScreen({ navigation }) {
   const { perfil } = useAuth();
@@ -78,13 +79,13 @@ export default function AdminVerificacoesScreen({ navigation }) {
 
   // ─── Render item ──────────────────────────────────────────────────────────
   const renderItem = ({ item }) => {
-    const foto = item.foto_principal ?? 'https://randomuser.me/api/portraits/lego/1.jpg';
+    const foto = item.foto_principal ?? null;
     const enviada = item.verificacao_enviada_em
       ? new Date(item.verificacao_enviada_em).toLocaleString('pt-BR')
       : '—';
     return (
       <TouchableOpacity style={styles.card} onPress={() => { setModalItem(item); setObsRejeicao(''); }} activeOpacity={0.85}>
-        <Image source={{ uri: foto }} style={styles.avatarFoto} />
+        <AvatarPessoa uri={foto} style={styles.avatarFoto} />
         <View style={styles.cardInfo}>
           <Text style={styles.cardNome}>{item.nome}</Text>
           <Text style={styles.cardSub}>Enviado em: {enviada}</Text>

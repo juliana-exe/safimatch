@@ -22,6 +22,7 @@ import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { obterMensagens, enviarMensagem, marcarComoLidas, ouvirMensagens, enviarFotoMensagem, marcarFotoVisualizadaOnce } from '../services/chatService';
 import { uploadFotoChat } from '../services/storageService';
 import { useAuth } from '../context/AuthContext';
+import AvatarPessoa from '../components/AvatarPessoa';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -222,10 +223,7 @@ export default function ChatScreen({ navigation, route }) {
       return (
         <View style={[styles.msgRow, minha && styles.msgRowMinha]}>
           {!minha && (
-            <Image
-              source={{ uri: conversa?.foto || 'https://randomuser.me/api/portraits/women/68.jpg' }}
-              style={styles.msgAvatar}
-            />
+            <AvatarPessoa uri={conversa?.foto} style={styles.msgAvatar} />
           )}
           <TouchableOpacity
             onPress={() => setModalFotoUrl(item.foto_url)}
@@ -247,10 +245,7 @@ export default function ChatScreen({ navigation, route }) {
         return (
           <View style={[styles.msgRow, minha && styles.msgRowMinha]}>
             {!minha && (
-              <Image
-                source={{ uri: conversa?.foto }}
-                style={styles.msgAvatar}
-              />
+              <AvatarPessoa uri={conversa?.foto} style={styles.msgAvatar} />
             )}
             <View style={styles.fotoUnicaExpirada}>
               <Ionicons name="eye-off-outline" size={16} color={COLORS.textMuted} />
@@ -279,10 +274,7 @@ export default function ChatScreen({ navigation, route }) {
       if (!item.view_once_visto) {
         return (
           <View style={[styles.msgRow]}>
-            <Image
-              source={{ uri: conversa?.foto || 'https://randomuser.me/api/portraits/women/68.jpg' }}
-              style={styles.msgAvatar}
-            />
+            <AvatarPessoa uri={conversa?.foto} style={styles.msgAvatar} />
             <TouchableOpacity
               style={styles.fotoUnicaPendente}
               onPress={() => verFotoUnica(item)}
@@ -296,10 +288,7 @@ export default function ChatScreen({ navigation, route }) {
       // Destinatária: já viu
       return (
         <View style={[styles.msgRow]}>
-          <Image
-            source={{ uri: conversa?.foto || 'https://randomuser.me/api/portraits/women/68.jpg' }}
-            style={styles.msgAvatar}
-          />
+          <AvatarPessoa uri={conversa?.foto} style={styles.msgAvatar} />
           <View style={styles.fotoUnicaExpirada}>
             <Ionicons name="eye-off-outline" size={16} color={COLORS.textMuted} />
             <Text style={styles.fotoUnicaExpiradaText}>Foto expirada</Text>
@@ -312,10 +301,7 @@ export default function ChatScreen({ navigation, route }) {
     return (
     <View style={[styles.msgRow, minha && styles.msgRowMinha]}>
       {!minha && (
-        <Image
-          source={{ uri: conversa?.foto || 'https://randomuser.me/api/portraits/women/68.jpg' }}
-          style={styles.msgAvatar}
-        />
+        <AvatarPessoa uri={conversa?.foto} style={styles.msgAvatar} />
       )}
       <View style={[styles.bubble, minha ? styles.bubbleMinha : styles.bubbleDela]}>
         <Text style={[styles.bubbleText, minha && styles.bubbleTextMinha]}>
@@ -339,10 +325,7 @@ export default function ChatScreen({ navigation, route }) {
 
         <TouchableOpacity style={styles.headerPerfil}>
           <View style={styles.headerFotoWrapper}>
-            <Image
-              source={{ uri: conversa?.foto || 'https://randomuser.me/api/portraits/women/68.jpg' }}
-              style={styles.headerFoto}
-            />
+            <AvatarPessoa uri={conversa?.foto} style={styles.headerFoto} />
             {conversa?.perfil_dela?.online_agora && <View style={styles.onlineDot} />}
           </View>
           <View>

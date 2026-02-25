@@ -6,7 +6,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Image,
   TextInput,
   Alert,
   ActivityIndicator,
@@ -18,6 +17,7 @@ import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { listarMatches } from '../services/matchService';
 import { supabase } from '../config/supabase';
 import { notificarNovaMensagem } from '../services/notificationService';
+import AvatarPessoa from '../components/AvatarPessoa';
 import { useAuth } from '../context/AuthContext';
 
 export default function ChatListScreen({ navigation }) {
@@ -90,7 +90,7 @@ export default function ChatListScreen({ navigation }) {
 
   const renderConversa = ({ item }) => {
     const parceira = item.perfil_dela ?? {};
-    const foto = (parceira.fotos ?? [])[0] ?? 'https://randomuser.me/api/portraits/lego/1.jpg';
+    const foto = (parceira.fotos ?? [])[0] ?? null;
     const hora = item.ultima_mensagem_hora
       ? new Date(item.ultima_mensagem_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       : '';
@@ -101,7 +101,7 @@ export default function ChatListScreen({ navigation }) {
       activeOpacity={0.75}
     >
       <View style={styles.fotoWrapper}>
-        <Image source={{ uri: foto }} style={styles.foto} />
+        <AvatarPessoa uri={foto} style={styles.foto} />
         {parceira.online_agora && <View style={styles.onlineDot} />}
       </View>
 
@@ -143,7 +143,8 @@ export default function ChatListScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Novos matches */}
+      {/* Novos matches — só exibe se houver ao menos 1 */}
+      {matchesNovos.length > 0 && (
       <View style={styles.matchesSection}>
       <View style={styles.matchesSectionHeader}>
         <Text style={styles.sectionTitle}>Novos matches</Text>
@@ -161,7 +162,7 @@ export default function ChatListScreen({ navigation }) {
           contentContainerStyle={{ paddingHorizontal: SPACING.lg, gap: 12 }}
           renderItem={({ item }) => {
             const parceira = item.perfil_dela ?? {};
-            const foto = (parceira.fotos ?? [])[0] ?? 'https://randomuser.me/api/portraits/lego/1.jpg';
+            const foto = (parceira.fotos ?? [])[0] ?? null;
             return (
             <TouchableOpacity
               style={styles.matchItem}
@@ -169,7 +170,7 @@ export default function ChatListScreen({ navigation }) {
               activeOpacity={0.8}
             >
               <View style={styles.matchFotoWrapper}>
-                <Image source={{ uri: foto }} style={styles.matchFoto} />
+                <AvatarPessoa uri={foto} style={styles.matchFoto} />
                 <View style={styles.matchCoracao}>
                   <Ionicons name="heart" size={13} color={COLORS.white} />
                 </View>
@@ -180,6 +181,7 @@ export default function ChatListScreen({ navigation }) {
           }}
         />
       </View>
+      )}
 
       {/* Busca */}
       <View style={styles.buscaWrapper}>
