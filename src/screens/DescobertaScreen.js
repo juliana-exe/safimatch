@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { buscarPerfisDescoberta } from '../services/perfilService';
 import { curtir, desfazerCurtida } from '../services/matchService';
+import { obterBonusAtivo, rolarBonus, consumirBonus } from '../services/bonusService';
 import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -26,8 +27,8 @@ const CARD_W = SCREEN_W - 32;
 const CARD_H = SCREEN_H * 0.62;
 const SWIPE_THRESHOLD = SCREEN_W * 0.28;
 
-// Botão de ação circular
-function BotaoAcao({ icone, cor, onPress, tamanho = 56 }) {
+// Botão de ação circular (com badge opcional para bônus ativos)
+function BotaoAcao({ icone, cor, onPress, tamanho = 56, badge }) {
   return (
     <TouchableOpacity
       style={[styles.botaoAcao, { width: tamanho, height: tamanho, borderRadius: tamanho / 2, borderColor: cor }]}
@@ -35,6 +36,11 @@ function BotaoAcao({ icone, cor, onPress, tamanho = 56 }) {
       activeOpacity={0.8}
     >
       <Ionicons name={icone} size={tamanho * 0.42} color={cor} />
+      {badge != null && badge > 0 ? (
+        <View style={styles.botaoBadge}>
+          <Text style={styles.botaoBadgeText}>{badge}</Text>
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -46,6 +52,12 @@ export default function DescobertaScreen({ navigation }) {
   const [matchAtual, setMatchAtual] = useState(null);
   const [ultimaAcao, setUltimaAcao] = useState(null);
   const [fotoIdx, setFotoIdx] = useState(0);
+
+  // Bônus aleatórios
+  const [bonusSuperlike, setBonusSuperlike] = useState(0);
+  const [bonusDesfazer, setBonusDesfazer] = useState(0);
+  const [bannerBonus, setBannerBonus] = useState(null);
+  const bannerAnim = useRef(new Animated.Value(-80)).current;
 
   const carregarPerfis = async (reiniciar = false) => {
     setCarregando(true);
@@ -67,7 +79,33 @@ export default function DescobertaScreen({ navigation }) {
     }
   };
 
-  useEffect(() => { carregarPerfis(); }, []);
+  useEffect(() => { carregarPerfis(); _carregarBonus(); }, []);
+
+  // ── Bônus ──────────────────────────────────────────────────────────────────
+  const _mostrarBannerBonus = (label) => {
+    setBannerBonus(label);
+    Animated.sequence([
+      Animated.timing(bannerAnim, { toValue: 0,   duration: 400, useNativeDriver: true }),
+      Animated.delay(3500),
+      Animated.timing(bannerAnim, { toValue: -80, duration: 400, useNativeDriver: true }),
+    ]).start(() => setBannerBonus(null));
+  };
+
+  const _carregarBonus = async () => {
+    // Tenta rolar um bônus novo (10 % chance, cooldown 24 h)
+    const novo = await rolarBonus();
+    if (novo) {
+      _mostrarBannerBonus(novo.label);
+      if (novo.tipo === 'superlike') setBonusSuperlike(novo.qtd);
+      else if (novo.tipo === 'desfazer') setBonusDesfazer(novo.qtd);
+      return;
+    }
+    // Sem bônus novo — carrega eventual bônus já ativo (sessão anterior)
+    const ativo = await obterBonusAtivo();
+    if (!ativo) return;
+    if (ativo.tipo === 'superlike') setBonusSuperlike(ativo.qtd);
+    else if (ativo.tipo === 'desfazer') setBonusDesfazer(ativo.qtd);
+  };
 
   const posicao = useRef(new Animated.ValueXY()).current;
   // Histórico de perfis já exibidos para desfazer ação
@@ -114,23 +152,14 @@ export default function DescobertaScreen({ navigation }) {
     });
   };
 
-  // Verifica se atingiu o limite diário de curtidas (não-premium: 10/dia)
-  const _verificarLimite = () => {
-    if (!meuPerfil?.premium && (meuPerfil?.curtidas_hoje ?? 0) >= 10) {
-      navigation.navigate('Premium');
-      return true; // bloqueado
-    }
-    return false;
-  };
-
+  // ── Ações de swipe ─────────────────────────────────────────────────────────
+  // Curtidas normais são ILIMITADAS para todos os usuários.
   const swipeRight = async () => {
-    if (_verificarLimite()) return;
     const perfil = perfis[0];
     historicoRef.current.push(perfil);
     setUltimaAcao('like');
     swipe('right', async () => {
       const res = await curtir(perfil.user_id ?? perfil.id, 'like');
-      if (res?.limite_atingido) { navigation.navigate('Premium'); return; }
       if (res?.houveMatch) setMatchAtual(perfil);
     });
   };
@@ -142,26 +171,30 @@ export default function DescobertaScreen({ navigation }) {
     swipe('left', () => curtir(perfil.user_id ?? perfil.id, 'nope'));
   };
 
-  const superLike = () => {
-    // Superlike é recurso exclusivo Premium
-    if (!meuPerfil?.premium) {
+  // Superlike — Premium OU bônus ativo
+  const superLike = async () => {
+    if (bonusSuperlike > 0) {
+      const consumido = await consumirBonus('superlike');
+      if (consumido) setBonusSuperlike(prev => prev - 1);
+    } else if (!meuPerfil?.premium) {
       navigation.navigate('Premium');
       return;
     }
-    if (_verificarLimite()) return;
     const perfil = perfis[0];
     historicoRef.current.push(perfil);
     setUltimaAcao('superlike');
     swipe('right', async () => {
       const res = await curtir(perfil.user_id ?? perfil.id, 'superlike');
-      if (res?.limite_atingido) { navigation.navigate('Premium'); return; }
       if (res?.houveMatch) setMatchAtual(perfil);
     });
   };
 
+  // Desfazer — Premium OU bônus ativo
   const desfazer = async () => {
-    // Desfazer é recurso exclusivo Premium
-    if (!meuPerfil?.premium) {
+    if (bonusDesfazer > 0) {
+      const consumido = await consumirBonus('desfazer');
+      if (consumido) setBonusDesfazer(prev => prev - 1);
+    } else if (!meuPerfil?.premium) {
       navigation.navigate('Premium');
       return;
     }
@@ -205,6 +238,14 @@ export default function DescobertaScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Banner de bônus ganho */}
+      {bannerBonus != null && (
+        <Animated.View style={[styles.bannerBonus, { transform: [{ translateY: bannerAnim }] }]}>
+          <Ionicons name="gift" size={18} color="#FFD700" style={{ marginRight: 8 }} />
+          <Text style={styles.bannerBonusText}>🎁 {bannerBonus}</Text>
+        </Animated.View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLogo}>
@@ -326,9 +367,9 @@ export default function DescobertaScreen({ navigation }) {
 
       {/* Botões de ação */}
       <View style={styles.acoes}>
-        <BotaoAcao icone="refresh-outline" cor={COLORS.warning} onPress={desfazer} tamanho={48} />
+        <BotaoAcao icone="refresh-outline" cor={COLORS.warning} onPress={desfazer} tamanho={48} badge={bonusDesfazer || null} />
         <BotaoAcao icone="close" cor={COLORS.dislike} onPress={swipeLeft} tamanho={64} />
-        <BotaoAcao icone="star" cor={COLORS.superLike} onPress={superLike} tamanho={48} />
+        <BotaoAcao icone="star" cor={COLORS.superLike} onPress={superLike} tamanho={48} badge={bonusSuperlike || null} />
         <BotaoAcao icone="heart" cor={COLORS.like} onPress={swipeRight} tamanho={64} />
         <BotaoAcao icone="flash-outline" cor={COLORS.secondary} onPress={() => navigation.navigate('Premium')} tamanho={48} />
       </View>
@@ -534,4 +575,27 @@ const styles = StyleSheet.create({
     fontSize: 14, color: 'rgba(255,255,255,0.75)',
     fontWeight: '600', textDecorationLine: 'underline',
   },
+
+  // Badge de bônus nos botões de ação
+  botaoBadge: {
+    position: 'absolute', top: -4, right: -4,
+    backgroundColor: '#FFD700',
+    borderRadius: 10, minWidth: 20, height: 20,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25, shadowRadius: 2, elevation: 5,
+  },
+  botaoBadgeText: { color: '#000', fontSize: 10, fontWeight: '800' },
+
+  // Banner de bônus (slide-down do topo)
+  bannerBonus: {
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 200,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#6A1B9A',
+    paddingVertical: 13, paddingHorizontal: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 20,
+  },
+  bannerBonusText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
