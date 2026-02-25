@@ -1,5 +1,5 @@
 // src/screens/ChatListScreen.js - Safimatch
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,34 +16,74 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { listarMatches } from '../services/matchService';
+import { supabase } from '../config/supabase';
+import { notificarNovaMensagem } from '../services/notificationService';
+import { useAuth } from '../context/AuthContext';
 
 export default function ChatListScreen({ navigation }) {
+  const { usuario } = useAuth();
   const [busca, setBusca] = useState('');
   const [matches, setMatches] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const matchesRef = useRef([]);
 
-  // Recarrega sempre que a tela receber foco (troca de aba, volta do chat, etc.)
+  const carregar = async () => {
+    setCarregando(true);
+    const { matches: lista } = await listarMatches();
+    const l = lista ?? [];
+    matchesRef.current = l;
+    setMatches(l);
+    setCarregando(false);
+  };
+
+  // Recarrega sempre que a tela receber foco
   useFocusEffect(
     useCallback(() => {
       let ativo = true;
-      const carregar = async () => {
-        setCarregando(true);
-        const { matches: lista } = await listarMatches();
-        if (ativo) {
-          setMatches(lista ?? []);
-          setCarregando(false);
-        }
-      };
-      carregar();
+      if (ativo) carregar();
       return () => { ativo = false; };
     }, [])
   );
 
+  // Realtime: escuta novas mensagens e atualiza a lista + notifica
+  useEffect(() => {
+    if (!usuario?.id) return;
+    const canal = supabase
+      .channel('chat-list-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'mensagens' },
+        async (payload) => {
+          const msg = payload.new;
+          // Ignora mensagens que eu mesma enviei
+          if (msg.de_user_id === usuario.id) return;
+          // Recarrega a lista para atualizar ultima_mensagem e badge
+          await carregar();
+          // Descobre o nome da remetente para a notificação
+          const match = matchesRef.current.find(m => m.match_id === msg.match_id);
+          const nome = match?.perfil_dela?.nome ?? 'Nova mensagem';
+          const texto = msg.tipo === 'foto_unica' ? '📷 Foto' :
+                        msg.tipo === 'foto' ? '📷 Foto' : msg.conteudo;
+          await notificarNovaMensagem(nome, texto);
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [usuario?.id]);
+
   // Separa matches sem mensagens (novos) dos que já conversaram
   const matchesNovos = matches.filter(m => !m.ultima_mensagem);
-  const conversas = matches.filter(m => !!m.ultima_mensagem);
 
-  const conversasFiltradas = conversas.filter((c) => {
+  // Lista principal: todos os matches, mensagens recentes primeiro
+  const todasConversas = [...matches].sort((a, b) => {
+    if (a.ultima_mensagem_hora && b.ultima_mensagem_hora)
+      return new Date(b.ultima_mensagem_hora) - new Date(a.ultima_mensagem_hora);
+    if (a.ultima_mensagem_hora) return -1;
+    if (b.ultima_mensagem_hora) return 1;
+    return 0;
+  });
+
+  const conversasFiltradas = todasConversas.filter((c) => {
     const nome = c.perfil_dela?.nome ?? '';
     return nome.toLowerCase().includes(busca.toLowerCase());
   });
@@ -166,7 +206,8 @@ export default function ChatListScreen({ navigation }) {
       ) : conversasFiltradas.length === 0 ? (
         <View style={styles.vazio}>
           <Ionicons name="chatbubbles-outline" size={56} color={COLORS.border} />
-          <Text style={styles.vazioText}>Nenhuma conversa encontrada</Text>
+          <Text style={styles.vazioText}>Nenhum match ainda</Text>
+          <Text style={[styles.vazioText, { fontSize: 13 }]}>Descubra pessoas na aba Descobrir 💜</Text>
         </View>
       ) : (
         <FlatList

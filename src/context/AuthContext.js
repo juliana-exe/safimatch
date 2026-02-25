@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ouvirMudancasAuth, obterSessao, obterUsuarioAtual } from '../services/authService';
 import { obterMeuPerfil } from '../services/perfilService';
 import { supabase } from '../config/supabase';
+import { registrarPushToken } from '../services/notificationService';
 
 // ----------------------------------------------------------------
 const AuthContext = createContext(null);
@@ -79,6 +80,8 @@ export const AuthProvider = ({ children }) => {
       if (novaSessao?.user) {
         const { perfil: p } = await obterMeuPerfil();
         setPerfil(p);
+        // Registra push token em background (falha silenciosa em emulador)
+        registrarPushToken().catch(() => {});
       } else {
         setPerfil(null);
       }
