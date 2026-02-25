@@ -3,6 +3,9 @@
 
 import { supabase } from '../config/supabase';
 
+const PREMIUM_API =
+  process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'https://safimatch-premium-api.fly.dev';
+
 // ================================================================
 // CADASTRO
 // ================================================================
@@ -108,26 +111,27 @@ export const alterarEmail = async (novoEmail) => {
 
 // ================================================================
 // EXCLUIR CONTA
+// Deleta permanentemente todos os dados do usuário (exigido pelo Google Play)
 // ================================================================
 export const excluirConta = async () => {
   try {
-    // Desativa o perfil antes de excluir
     const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) throw new Error('Usuária não autenticada');
+    if (!session?.access_token) throw new Error('Sessão expirada. Faça login novamente.');
 
-    await supabase
-      .from('perfis')
-      .update({ ativa: false })
-      .eq('user_id', user.id);
+    const resp = await fetch(`${PREMIUM_API}/conta/excluir`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
 
-    // Nota: exclusão real do auth.users requer service_role key (backend)
-    // Implemente uma Edge Function para isso em produção
+    if (!resp.ok) {
+      const d = await resp.json().catch(() => ({}));
+      throw new Error(d.erro ?? 'Erro ao excluir conta.');
+    }
+
     await supabase.auth.signOut();
-
     return { sucesso: true };
   } catch (error) {
-    return { sucesso: false, erro: _traduzirErro(error) };
+    return { sucesso: false, erro: error.message || 'Erro ao excluir conta.' };
   }
 };
 

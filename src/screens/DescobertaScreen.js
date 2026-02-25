@@ -47,16 +47,16 @@ export default function DescobertaScreen({ navigation }) {
   const [ultimaAcao, setUltimaAcao] = useState(null);
   const [fotoIdx, setFotoIdx] = useState(0);
 
-  const FOTO_PLACEHOLDER = 'https://randomuser.me/api/portraits/women/90.jpg';
-
   const carregarPerfis = async (reiniciar = false) => {
     setCarregando(true);
     try {
       const { perfis: lista } = await buscarPerfisDescoberta({ reiniciar });
-      // Garante que todo perfil tenha ao menos uma foto
+      // Garante que todo perfil tenha fotos válidas (sem URLs externas de terceiros)
       const normalizados = (lista ?? []).map(p => ({
         ...p,
-        fotos: (p.fotos && p.fotos.length > 0) ? p.fotos : [p.foto_principal ?? FOTO_PLACEHOLDER],
+        fotos: (p.fotos?.filter(Boolean).length > 0)
+          ? p.fotos.filter(Boolean)
+          : (p.foto_principal ? [p.foto_principal] : []),
         interesses: p.interesses ?? [],
       }));
       setPerfis(normalizados);
@@ -221,7 +221,12 @@ export default function DescobertaScreen({ navigation }) {
         {/* Card de fundo (próximo perfil) */}
         {perfis.length > 1 && (
           <View style={[styles.card, styles.cardFundo]}>
-            <Image source={{ uri: perfis[1].fotos[0] }} style={styles.cardImagem} />
+            {perfis[1].fotos[0]
+              ? <Image source={{ uri: perfis[1].fotos[0] }} style={styles.cardImagem} />
+              : <View style={[styles.cardImagem, styles.semFoto]}>
+                  <Ionicons name="person-circle" size={100} color="rgba(173,20,87,0.25)" />
+                </View>
+            }
             <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.cardGradient}>
               <Text style={styles.cardNome}>{perfis[1].nome}, {perfis[1].idade}</Text>
             </LinearGradient>
@@ -243,7 +248,12 @@ export default function DescobertaScreen({ navigation }) {
           {...panResponder.panHandlers}
         >
           {/* Toque nas metades esquerda/direita para trocar foto */}
-          <Image source={{ uri: perfis[0].fotos[fotoIdx] ?? perfis[0].fotos[0] }} style={styles.cardImagem} />
+          {(perfis[0].fotos.length > 0 && perfis[0].fotos[fotoIdx])
+            ? <Image source={{ uri: perfis[0].fotos[fotoIdx] }} style={styles.cardImagem} />
+            : <View style={[styles.cardImagem, styles.semFoto]}>
+                <Ionicons name="person-circle" size={120} color="rgba(173,20,87,0.25)" />
+              </View>
+          }
 
           {/* Áreas de toque para navegar entre fotos (sem interferir no swipe) */}
           {perfis[0].fotos.length > 1 && (
@@ -399,6 +409,7 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   cardImagem: { width: '100%', height: '100%', resizeMode: 'cover' },
+  semFoto: { backgroundColor: '#F8BBD0', alignItems: 'center', justifyContent: 'center' },
 
   // Navegação de fotos dentro do card
   fotoNavArea: {

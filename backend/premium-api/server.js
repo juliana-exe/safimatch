@@ -17,7 +17,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -50,6 +50,13 @@ const PLANOS = {
   mensal:     { reais: 9.90,  dias: 30,  label: 'Safimatch Premium — Mensal',     centavos: 990  },
   trimestral: { reais: 24.90, dias: 90,  label: 'Safimatch Premium — Trimestral', centavos: 2490 },
   anual:      { reais: 79.90, dias: 365, label: 'Safimatch Premium — Anual',      centavos: 7990 },
+};
+
+// SKUs do Google Play Console (Monetização → Assinaturas)
+const SKU_TO_PLANO = {
+  'premium_mensal':     { label: 'mensal',     dias: 30,  centavos: 990  },
+  'premium_trimestral': { label: 'trimestral', dias: 90,  centavos: 2490 },
+  'premium_anual':      { label: 'anual',      dias: 365, centavos: 7990 },
 };
 
 const EXPIRA_MINUTOS = 30;
@@ -238,6 +245,74 @@ async function _ativarPremium(correlationID) {
     console.log(`✅ Premium ativado: user_id=${pag.user_id} até ${premiumAte}`);
   }
 }
+
+// ── POST /premium/verificar-compra-play ──────────────────────────────────────
+// Verifica compra do Google Play Billing e ativa o Premium no Supabase
+app.post('/premium/verificar-compra-play', async (req, res) => {
+  const userId = await autenticar(req, res);
+  if (!userId) return;
+
+  const { purchaseToken, productId, transactionId } = req.body ?? {};
+  if (!purchaseToken || !productId) {
+    return res.status(400).json({ erro: 'purchaseToken e productId são obrigatórios' });
+  }
+
+  const planoInfo = SKU_TO_PLANO[productId];
+  if (!planoInfo) {
+    return res.status(400).json({ erro: `Produto desconhecido: ${productId}` });
+  }
+
+  const premiumAte = new Date(Date.now() + planoInfo.dias * 86_400_000).toISOString();
+
+  const { error: errPerfil } = await db
+    .from('perfis')
+    .update({ premium: true, premium_ate: premiumAte })
+    .eq('user_id', userId);
+
+  if (errPerfil) {
+    console.error('[verificar-compra-play] Erro ao ativar premium:', errPerfil.message);
+    return res.status(500).json({ erro: 'Erro interno ao ativar Premium.' });
+  }
+
+  // Registra pagamento (ignora duplicatas pelo correlation_id)
+  const corrId = `gplay-${transactionId ?? purchaseToken.slice(0, 40)}`;
+  await db.from('pagamentos').insert({
+    user_id:        userId,
+    correlation_id: corrId,
+    valor_centavos: planoInfo.centavos,
+    status:         'COMPLETED',
+    pago_em:        new Date().toISOString(),
+  }).then(r => { if (r.error?.code !== '23505') console.warn('[play-billing]', r.error?.message); });
+
+  console.log(`✅ [play] Premium ativado: user=${userId} plano=${planoInfo.label} até ${premiumAte}`);
+  return res.json({ sucesso: true, premium_ate: premiumAte });
+});
+
+// ── DELETE /conta/excluir ─────────────────────────────────────────────────────
+// Exclui permanentemente todos os dados do usuário (exigência Google Play Policy)
+app.delete('/conta/excluir', async (req, res) => {
+  const userId = await autenticar(req, res);
+  if (!userId) return;
+
+  try {
+    // Deleta dados em ordem respeitando foreign keys
+    await db.from('mensagens').delete().or(`de_user_id.eq.${userId},para_user_id.eq.${userId}`);
+    await db.from('matches').delete().or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
+    await db.from('curtidas').delete().or(`de_user_id.eq.${userId},para_user_id.eq.${userId}`);
+    await db.from('pagamentos').delete().eq('user_id', userId);
+    await db.from('perfis').delete().eq('user_id', userId);
+
+    // Deleta o usuário do Auth (exclusão real e irreversível)
+    const { error } = await db.auth.admin.deleteUser(userId);
+    if (error) throw new Error(error.message);
+
+    console.log(`🗑️  Conta excluída permanentemente: user_id=${userId}`);
+    return res.json({ sucesso: true });
+  } catch (e) {
+    console.error('[conta/excluir] Erro:', e.message);
+    return res.status(500).json({ erro: 'Erro ao excluir conta. Contate suporte@safimatch.com.br' });
+  }
+});
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({
