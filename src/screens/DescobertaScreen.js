@@ -82,14 +82,21 @@ export default function DescobertaScreen({ navigation }) {
   useEffect(() => { carregarPerfis(); _carregarBonus(); }, []);
 
   // ── Bônus ──────────────────────────────────────────────────────────────────
+  // Só seta o label; a animação roda no useEffect DEPOIS do re-render
   const _mostrarBannerBonus = (label) => {
+    bannerAnim.setValue(-80); // garante posição inicial antes de montar
     setBannerBonus(label);
+  };
+
+  // Dispara a animação assim que o Animated.View entrar na tela
+  useEffect(() => {
+    if (!bannerBonus) return;
     Animated.sequence([
       Animated.timing(bannerAnim, { toValue: 0,   duration: 400, useNativeDriver: true }),
       Animated.delay(3500),
       Animated.timing(bannerAnim, { toValue: -80, duration: 400, useNativeDriver: true }),
     ]).start(() => setBannerBonus(null));
-  };
+  }, [bannerBonus]);
 
   const _carregarBonus = async () => {
     // Tenta rolar um bônus novo (10 % chance, cooldown 24 h)
@@ -252,9 +259,11 @@ export default function DescobertaScreen({ navigation }) {
           <Ionicons name="heart" size={22} color={COLORS.primary} />
           <Text style={styles.headerTitle}>Safimatch</Text>
         </View>
-        <TouchableOpacity style={styles.headerIcon} onPress={() => Alert.alert('Filtros', 'Ajuste seus filtros de descoberta em Ajustes → Filtros de Descoberta.')}>
-          <Ionicons name="options-outline" size={24} color={COLORS.textSecondary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity style={styles.headerIcon} onPress={() => Alert.alert('Filtros', 'Ajuste seus filtros de descoberta em Ajustes → Filtros de Descoberta.')}>
+            <Ionicons name="options-outline" size={24} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stack de cards */}

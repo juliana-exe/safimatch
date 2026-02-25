@@ -689,9 +689,21 @@ export default function ConfiguracaoScreen({ navigation }) {
             icone="shield-checkmark-outline" titulo="Verificação de identidade"
             subtitulo="Mostre que você é real ✓"
             corIcone="#1565C0"
-            onPress={() => Alert.alert('Em breve', 'Verificação disponível em breve.')}
+            onPress={() => navigation.navigate('VerificacaoIdentidade')}
           />
         </Secao>
+
+        {/* ── ADMIN ── visível apenas para usuárias com perfil.admin === true ── */}
+        {perfil?.admin === true && (
+          <Secao titulo="ADMINISTRAÇÃO">
+            <Linha
+              icone="person-circle-outline" titulo="Moderar verificações"
+              subtitulo="Aprova ou rejeita selfies enviadas"
+              corIcone="#6A1B9A"
+              onPress={() => navigation.navigate('AdminVerificacoes')}
+            />
+          </Secao>
+        )}
 
         {/* ── FILTROS DE DESCOBERTA ── */}
         <Secao titulo="FILTROS DE DESCOBERTA">

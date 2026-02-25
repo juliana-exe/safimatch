@@ -19,6 +19,8 @@ import PerfilScreen from '../screens/PerfilScreen';
 import ConfiguracaoScreen from '../screens/ConfiguracaoScreen';
 import VerificacaoScreen from '../screens/VerificacaoScreen';
 import PremiumScreen from '../screens/PremiumScreen';
+import VerificacaoIdentidadeScreen from '../screens/VerificacaoIdentidadeScreen';
+import AdminVerificacoesScreen from '../screens/AdminVerificacoesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -171,6 +173,16 @@ export default function RootNavigator() {
               name="Premium"
               component={PremiumScreen}
               options={{ animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen
+              name="VerificacaoIdentidade"
+              component={VerificacaoIdentidadeScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="AdminVerificacoes"
+              component={AdminVerificacoesScreen}
+              options={{ animation: 'slide_from_right' }}
             />
           </>
         ) : (

@@ -12,7 +12,7 @@ export const obterMensagens = async (matchId, pagina = 0, porPagina = 50) => {
 
     const { data, error } = await supabase
       .from('mensagens')
-      .select('id, match_id, de_user_id, conteudo, tipo, lida, criado_em')
+      .select('id, match_id, de_user_id, conteudo, tipo, lida, criado_em, foto_url, view_once, view_once_visto')
       .eq('match_id', matchId)
       .order('criado_em', { ascending: false })
       .range(inicio, inicio + porPagina - 1);

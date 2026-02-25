@@ -37,7 +37,25 @@ export default function ChatScreen({ navigation, route }) {
   const [enviando, setEnviando] = useState(false);
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [modalFotoUrl, setModalFotoUrl] = useState(null);
+  const [modalViewOnce, setModalViewOnce] = useState(false);
+  const [modalCountdown, setModalCountdown] = useState(0);
   const listaRef = useRef(null);
+  const countdownRef = useRef(null);
+
+  const fecharModal = () => {
+    setModalFotoUrl(null);
+    setModalViewOnce(false);
+    setModalCountdown(0);
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+  };
+
+  // Limpa countdown ao desmontar
+  useEffect(() => () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+  }, []);
 
   // Carrega mensagens iniciais
   useEffect(() => {
@@ -96,6 +114,7 @@ export default function ChatScreen({ navigation, route }) {
         mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.85,
+        ...(useCamera && viewOnce ? { saveToLibrary: false } : {}),
       });
       if (resultado.canceled) return;
 
@@ -147,14 +166,25 @@ export default function ChatScreen({ navigation, route }) {
   };
 
   const verFotoUnica = async (item) => {
-    // marca como vista no DB
     await marcarFotoVisualizadaOnce(item.id);
-    // atualiza estado local
     setMensagens(prev =>
       prev.map(m => m.id === item.id ? { ...m, view_once_visto: true } : m)
     );
-    // abre modal para visualização
     setModalFotoUrl(item.foto_url);
+    setModalViewOnce(true);
+    let secs = 10;
+    setModalCountdown(secs);
+    countdownRef.current = setInterval(() => {
+      secs -= 1;
+      setModalCountdown(secs);
+      if (secs <= 0) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+        setModalFotoUrl(null);
+        setModalViewOnce(false);
+        setModalCountdown(0);
+      }
+    }, 1000);
   };
 
   // -------------------------------------------------------------------------
@@ -211,22 +241,36 @@ export default function ChatScreen({ navigation, route }) {
     }
 
     // ---- Foto única --------------------------------------------------------
+    if (item.tipo === 'foto_unica') {
+      // Fallback: foto_url ausente (SELECT antigo sem o campo) → exibe expirada
+      if (!item.foto_url) {
+        return (
+          <View style={[styles.msgRow, minha && styles.msgRowMinha]}>
+            {!minha && (
+              <Image
+                source={{ uri: conversa?.foto }}
+                style={styles.msgAvatar}
+              />
+            )}
+            <View style={styles.fotoUnicaExpirada}>
+              <Ionicons name="eye-off-outline" size={16} color={COLORS.textMuted} />
+              <Text style={styles.fotoUnicaExpiradaText}>Foto única</Text>
+            </View>
+          </View>
+        );
+      }
+    }
     if (item.tipo === 'foto_unica' && item.foto_url) {
-      // Remetente: sempre mostra miniatura com badge 🔒
+      // Remetente: nunca mostra a imagem novamente — apenas confirmação de envio
       if (minha) {
         return (
           <View style={[styles.msgRow, styles.msgRowMinha]}>
-            <View style={styles.fotoUnicaSenderWrapper}>
-              <TouchableOpacity onPress={() => setModalFotoUrl(item.foto_url)}>
-                <Image source={{ uri: item.foto_url }} style={styles.fotoImgMensagem} resizeMode="cover" />
-              </TouchableOpacity>
-              <View style={styles.fotoUnicaBadgeSender}>
-                <Ionicons name="eye-off-outline" size={11} color="#fff" />
-                <Text style={styles.fotoUnicaBadgeText}>Uma vez</Text>
+            <View style={[styles.fotoUnicaPendente, styles.fotoUnicaEnviada]}>
+              <Ionicons name="eye-off-outline" size={20} color="#fff" />
+              <View>
+                <Text style={styles.fotoUnicaPendenteText}>Foto única · Enviada</Text>
+                <Text style={styles.fotoUnicaEnviadaHora}>{hora} ✓✓</Text>
               </View>
-              <Text style={[styles.msgHora, styles.fotoHora, styles.msgHoraMinha]}>
-                {hora} ✓✓
-              </Text>
             </View>
           </View>
         );
@@ -423,12 +467,20 @@ export default function ChatScreen({ navigation, route }) {
         visible={!!modalFotoUrl}
         transparent
         animationType="fade"
-        onRequestClose={() => setModalFotoUrl(null)}
+        onRequestClose={fecharModal}
       >
         <View style={styles.modalBg}>
+          {modalViewOnce && (
+            <View style={styles.modalCountdownBadge}>
+              <Ionicons name="eye-off-outline" size={14} color="#fff" />
+              <Text style={styles.modalCountdownText}>Fechando em {modalCountdown}s</Text>
+            </View>
+          )}
           <TouchableOpacity
             style={styles.modalCloseArea}
-            onPress={() => setModalFotoUrl(null)}
+            onPress={fecharModal}
+            onLongPress={() => {}}
+            delayLongPress={100}
             activeOpacity={1}
           >
             <Image
@@ -437,7 +489,7 @@ export default function ChatScreen({ navigation, route }) {
               resizeMode="contain"
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setModalFotoUrl(null)}>
+          <TouchableOpacity style={styles.modalCloseBtn} onPress={fecharModal}>
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -551,8 +603,16 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
 
-  // Foto única – remetente
+  // Foto única – remetente (balão bloqueado, sem imagem)
   fotoUnicaSenderWrapper: { position: 'relative', maxWidth: 200 },
+  fotoUnicaEnviada: {
+    borderBottomLeftRadius: RADIUS.lg,
+    borderBottomRightRadius: 4,
+    opacity: 0.85,
+  },
+  fotoUnicaEnviadaHora: {
+    fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 3,
+  },
   fotoUnicaBadgeSender: {
     position: 'absolute', top: 8, left: 8,
     flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -578,6 +638,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10,
   },
   fotoUnicaExpiradaText: { fontSize: 13, color: COLORS.textMuted },
+
+  // Countdown de foto única no modal
+  modalCountdownBadge: {
+    position: 'absolute', top: 52, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderRadius: RADIUS.full, paddingHorizontal: 14, paddingVertical: 7,
+    zIndex: 10,
+  },
+  modalCountdownText: { fontSize: 13, color: '#fff', fontWeight: '700' },
 
   // Modal tela cheia
   modalBg: {

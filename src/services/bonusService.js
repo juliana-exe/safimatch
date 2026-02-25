@@ -79,6 +79,17 @@ export async function rolarBonus() {
   }
 }
 
+// ─── Resetar bônus (apenas DEV) ──────────────────────────────────────────────
+/**
+ * Apaga qualquer bônus ativo e o registro de último sorteio.
+ * Use apenas em ambiente de desenvolvimento para testar o fluxo.
+ */
+export async function resetarBonus() {
+  try {
+    await AsyncStorage.multiRemove([CHAVE_BONUS, CHAVE_ULTIMO]);
+  } catch {}
+}
+
 // ─── Consumir bônus ───────────────────────────────────────────────────────────
 /**
  * Decrementa 1 unidade do bônus do tipo informado.
