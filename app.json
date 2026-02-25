@@ -21,7 +21,7 @@
         "backgroundColor": "#AD1457"
       },
       "package": "com.safimatch.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "minSdkVersion": 24,
@@ -42,6 +42,7 @@
       "expo-image-picker",
       "expo-asset",
       "expo-font",
+      "expo-notifications",
       "react-native-iap"
     ],
     "extra": {
