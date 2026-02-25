@@ -21,7 +21,7 @@
         "backgroundColor": "#AD1457"
       },
       "package": "com.safimatch.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "minSdkVersion": 24,
