@@ -27,7 +27,7 @@ import {
 import { atualizarPerfil } from '../services/perfilService';
 import { useAuth } from '../context/AuthContext';
 
-const COD_LENGTH = 6;
+const COD_LENGTH = 8;
 const COUNTDOWN_INICIAL = 60;
 
 export default function VerificacaoScreen({ navigation, route }) {
@@ -109,7 +109,7 @@ export default function VerificacaoScreen({ navigation, route }) {
   const verificar = async (cod) => {
     const token = (cod ?? codigo.join('')).trim();
     if (token.length < COD_LENGTH) {
-      setErro('Digite o código completo de 6 dígitos.');
+      setErro('Digite o código completo de 8 dígitos.');
       return;
     }
     if (verificando) return;
@@ -184,7 +184,7 @@ export default function VerificacaoScreen({ navigation, route }) {
     email: {
       icone: 'mail',
       titulo: 'Verifique seu e-mail',
-      desc: `Enviamos um código de 6 dígitos para`,
+      desc: `Enviamos um código de 8 dígitos para`,
       dica: 'Verifique também a pasta de spam.',
     },
     telefone: {
