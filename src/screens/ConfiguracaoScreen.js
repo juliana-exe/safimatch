@@ -580,11 +580,13 @@ export default function ConfiguracaoScreen({ navigation }) {
     useCallback(() => {
       const carregar = async () => {
         setCarregando(true);
+        // Timeout de segurança: garante que o spinner nunca trava
+        const timeout = setTimeout(() => setCarregando(false), 10000);
         try {
           const [resPerfil, resConfig, sessaoResp] = await Promise.all([
             obterMeuPerfil(),
             obterConfiguracoes(),
-            supabase.auth.getSession(),   // sem rede — lê localStorage
+            supabase.auth.getSession(),
           ]);
           if (resPerfil.sucesso) setPerfil(resPerfil.perfil);
           if (resConfig.sucesso && resConfig.config) {
@@ -595,6 +597,7 @@ export default function ConfiguracaoScreen({ navigation }) {
         } catch (e) {
           console.warn('ConfiguracaoScreen: erro ao carregar', e);
         } finally {
+          clearTimeout(timeout);
           setCarregando(false);
         }
       };

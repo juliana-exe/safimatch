@@ -83,6 +83,7 @@ export const atualizarPerfil = async (dados, sessao = null) => {
       'nome', 'bio', 'data_nascimento', 'cidade', 'estado',
       'orientacao', 'interesses', 'fotos', 'foto_principal',
       'latitude', 'longitude', 'telefone', 'telefone_verificado',
+      'ativa',
     ];
 
     const dadosFiltrados = Object.fromEntries(
@@ -139,13 +140,17 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
       excluir.push(...jaViu);
     }
 
-    // Busca perfis com filtro de idade
+    const idadeMin = config?.idade_min ?? 18;
+    const idadeMax = config?.idade_max ?? 60;
+
+    // Busca perfis excluindo os já vistos
+    // Inclui perfis com idade NULL (data_nascimento não preenchida) para não sumir da descoberta
     let query = supabase
       .from('perfis_publicos')
       .select('*')
       .not('user_id', 'in', `(${excluir.join(',')})`)
-      .gte('idade', config?.idade_min ?? 18)
-      .lte('idade', config?.idade_max ?? 60)
+      .or(`idade.gte.${idadeMin},idade.is.null`)
+      .or(`idade.lte.${idadeMax},idade.is.null`)
       .limit(limite);
 
     const { data, error } = await query;

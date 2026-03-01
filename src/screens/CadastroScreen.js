@@ -311,6 +311,7 @@ export default function CadastroScreen({ navigation }) {
         bio: f.bio.trim(),
         orientacao: _normOrientacao(orientacao),
         interesses,
+        ativa: true,
         ...(f.telefone ? { telefone: f.telefone.replace(/\D/g, '') } : {}),
       };
       // Remove campos vazios/undefined para não sobrescrever dados válidos
