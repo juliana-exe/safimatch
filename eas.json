@@ -8,7 +8,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://nujzwirwcdlkytgldfsp.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_7kBrEPAMyipnh4jtqwHaKw_NZ-E7Gzd",
-        "EXPO_PUBLIC_PREMIUM_API_URL": "https://safimatch-premium-api.fly.dev"
+        "EXPO_PUBLIC_PREMIUM_API_URL": "https://nujzwirwcdlkytgldfsp.supabase.co/functions/v1/premium-api"
       },
       "android": {
         "buildType": "apk",
@@ -19,7 +19,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://nujzwirwcdlkytgldfsp.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_7kBrEPAMyipnh4jtqwHaKw_NZ-E7Gzd",
-        "EXPO_PUBLIC_PREMIUM_API_URL": "https://safimatch-premium-api.fly.dev"
+        "EXPO_PUBLIC_PREMIUM_API_URL": "https://nujzwirwcdlkytgldfsp.supabase.co/functions/v1/premium-api"
       },
       "android": {
         "buildType": "app-bundle"
