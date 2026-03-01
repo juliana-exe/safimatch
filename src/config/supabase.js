@@ -11,7 +11,7 @@ const SUPABASE_URL =
   process.env.EXPO_PUBLIC_SUPABASE_URL ||
   'https://nujzwirwcdlkytgldfsp.supabase.co';
 
-const SUPABASE_ANON_KEY =
+export const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_7kBrEPAMyipnh4jtqwHaKw_NZ-E7Gzd';
 

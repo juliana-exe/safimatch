@@ -1,7 +1,7 @@
 // src/services/authService.js - Safimatch
 // Serviço de autenticação usando Supabase GoTrue (open source)
 
-import { supabase } from '../config/supabase';
+import { supabase, SUPABASE_ANON_KEY } from '../config/supabase';
 
 const PREMIUM_API =
   process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'https://nujzwirwcdlkytgldfsp.supabase.co/functions/v1/premium-api';
@@ -120,7 +120,10 @@ export const excluirConta = async () => {
 
     const resp = await fetch(`${PREMIUM_API}/conta/excluir`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${session.access_token}`,
+      },
     });
 
     if (!resp.ok) {

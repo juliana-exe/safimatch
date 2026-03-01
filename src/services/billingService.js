@@ -12,7 +12,7 @@ import {
   purchaseErrorListener,
   getAvailablePurchases,
 } from 'react-native-iap';
-import { supabase } from '../config/supabase';
+import { supabase, SUPABASE_ANON_KEY } from '../config/supabase';
 
 const PREMIUM_API =
   process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'https://nujzwirwcdlkytgldfsp.supabase.co/functions/v1/premium-api';
@@ -128,6 +128,7 @@ export async function verificarCompraPlay(purchase) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
         Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({
