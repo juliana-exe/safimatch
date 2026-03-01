@@ -1,11 +1,27 @@
 // src/services/storageService.js - Safimatch
 // Upload de fotos via Supabase Storage
-// As fotos ficam no servidor próprio Docker
 
 import { Platform } from 'react-native';
 import { supabase } from '../config/supabase';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const BUCKET = 'fotos-perfil';
+
+// ── Comprime e redimensiona a imagem antes do upload ─────────────────────────
+// Reduz de ~4MB para ~200-400KB, acelerando muito o upload
+const _comprimirImagem = async (uri) => {
+  if (Platform.OS === 'web') return uri; // web não precisa
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 900 } }],  // mantém proporção, max 900px de largura
+      { compress: 0.78, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  } catch {
+    return uri; // fallback: usa URI original se falhar
+  }
+};
 
 // ── Utilitário interno: lê URI e retorna o dado correto por plataforma ─────────
 // Web: expo-image-picker devolve blob:url → passamos Blob direto ao Supabase
@@ -35,7 +51,9 @@ const caminhoSlot = (userId, fotoIndex, contentType) => {
 // ================================================================
 export const uploadFoto = async (userId, imageUri, fotoIndex = 0) => {
   try {
-    const { dado, contentType } = await uriParaDado(imageUri);
+    // Comprime antes de converter/subir (reduz tamanho drasticamente)
+    const uriComprimida = await _comprimirImagem(imageUri);
+    const { dado, contentType } = await uriParaDado(uriComprimida);
     const caminho = caminhoSlot(userId, fotoIndex, contentType);
 
     const { data, error } = await supabase.storage

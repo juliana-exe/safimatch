@@ -13,6 +13,15 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+
+// Pré-carrega imagens dos próximos cards em segundo plano
+const _prefetchFotos = (perfis) => {
+  perfis.slice(0, 5).forEach(p => {
+    const urls = (p.fotos?.filter(Boolean) ?? []);
+    if (p.foto_principal) urls.unshift(p.foto_principal);
+    urls.slice(0, 2).forEach(url => { Image.prefetch(url).catch(() => {}); });
+  });
+};
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -73,6 +82,8 @@ export default function DescobertaScreen({ navigation }) {
         interesses: p.interesses ?? [],
       }));
       setPerfis(normalizados);
+      // Pré-carrega as imagens dos primeiros cards para eliminar o delay ao deslizar
+      _prefetchFotos(normalizados);
     } catch (e) {
       console.warn('Erro ao carregar perfis:', e);
     } finally {
