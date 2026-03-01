@@ -141,7 +141,7 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
     const idadeMax = config?.idade_max ?? 60;
 
     // Busca apenas os campos usados no card (evita transferir dados desnecessários)
-    const CAMPOS_CARD = 'user_id,nome,idade,cidade,bio,fotos,foto_principal,interesses,verificada';
+    const CAMPOS_CARD = 'user_id,nome,idade,cidade,bio,fotos,foto_principal,interesses,verificada,orientacao';
 
     // Busca perfis excluindo os já vistos
     // Inclui perfis com idade NULL (data_nascimento não preenchida) para não sumir da descoberta

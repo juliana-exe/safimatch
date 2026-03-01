@@ -290,7 +290,15 @@ export default function DescobertaScreen({ navigation }) {
                 </View>
             }
             <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.cardGradient}>
-              <Text style={styles.cardNome}>{perfis[1].nome}, {perfis[1].idade}</Text>
+              <Text style={styles.cardNome}>
+                {perfis[1].nome}{perfis[1].idade != null ? `, ${perfis[1].idade}` : ''}
+              </Text>
+              {!!perfis[1].cidade && (
+                <View style={styles.cardCidade}>
+                  <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.cardCidadeText}>{perfis[1].cidade}</Text>
+                </View>
+              )}
             </LinearGradient>
           </View>
         )}
@@ -312,9 +320,10 @@ export default function DescobertaScreen({ navigation }) {
           {/* Toque nas metades esquerda/direita para trocar foto */}
           {(perfis[0].fotos.length > 0 && perfis[0].fotos[fotoIdx])
             ? <Image source={{ uri: perfis[0].fotos[fotoIdx] }} style={styles.cardImagem} />
-            : <View style={[styles.cardImagem, styles.semFoto]}>
-                <Ionicons name="person-circle" size={120} color="rgba(173,20,87,0.25)" />
-              </View>
+            : <LinearGradient colors={['#F48FB1', '#AD1457']} style={[styles.cardImagem, styles.semFoto]}>
+                <Ionicons name="person-circle" size={120} color="rgba(255,255,255,0.35)" />
+                <Text style={styles.semFotoTexto}>Sem foto ainda</Text>
+              </LinearGradient>
           }
 
           {/* Áreas de toque para navegar entre fotos (sem interferir no swipe) */}
@@ -366,13 +375,27 @@ export default function DescobertaScreen({ navigation }) {
             )}
 
             <Text style={styles.cardNome}>
-              {perfis[0].nome}, {perfis[0].idade}
+              {perfis[0].nome}{perfis[0].idade != null ? `, ${perfis[0].idade}` : ''}
             </Text>
-            <View style={styles.cardCidade}>
-              <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.cardCidadeText}>{perfis[0].cidade}</Text>
+
+            {/* Cidade + Orientação */}
+            <View style={styles.cardInfoRow}>
+              {!!perfis[0].cidade && (
+                <View style={styles.cardCidade}>
+                  <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.cardCidadeText}>{perfis[0].cidade}</Text>
+                </View>
+              )}
+              {!!perfis[0].orientacao && (
+                <View style={styles.cardOrientacaoTag}>
+                  <Text style={styles.cardOrientacaoText}>{perfis[0].orientacao}</Text>
+                </View>
+              )}
             </View>
-            <Text style={styles.cardBio} numberOfLines={2}>{perfis[0].bio}</Text>
+
+            {!!perfis[0].bio && (
+              <Text style={styles.cardBio} numberOfLines={2}>{perfis[0].bio}</Text>
+            )}
 
             {/* Tags */}
             <View style={styles.cardTags}>
@@ -479,7 +502,8 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   cardImagem: { width: '100%', height: '100%', resizeMode: 'cover' },
-  semFoto: { backgroundColor: '#F8BBD0', alignItems: 'center', justifyContent: 'center' },
+  semFoto: { alignItems: 'center', justifyContent: 'center' },
+  semFotoTexto: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 8, fontWeight: '600' },
 
   // Navegação de fotos dentro do card
   fotoNavArea: {
@@ -515,6 +539,13 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
     gap: 5,
   },
+  cardInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  cardOrientacaoTag: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: RADIUS.full,
+  },
+  cardOrientacaoText: { fontSize: 11, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
 
   // Badges swipe
   badgeLike: {
