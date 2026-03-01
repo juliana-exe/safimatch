@@ -36,12 +36,18 @@ function json(data: unknown, status = 200) {
 }
 
 // ── Valida JWT via Supabase Auth e retorna user_id ────────────────────────────
+// Padrão recomendado: cria client temporário com o token do usuário
 async function autenticar(req: Request): Promise<string | null> {
-  const header = req.headers.get('authorization') ?? '';
-  const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) return null;
+  const authHeader = req.headers.get('authorization') ?? '';
+  if (!authHeader.startsWith('Bearer ')) return null;
 
-  const { data: { user }, error } = await db.auth.getUser(token);
+  const userClient = createClient(
+    SUPABASE_URL,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const { data: { user }, error } = await userClient.auth.getUser();
   if (error || !user) return null;
   return user.id;
 }
@@ -137,7 +143,7 @@ Deno.serve(async (req) => {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro desconhecido';
       console.error('[conta/excluir] Erro:', msg);
-      return json({ erro: 'Erro ao excluir conta. Contate suporte@safimatch.com.br' }, 500);
+      return json({ erro: 'Erro ao excluir conta. Contate safimatchro@gmail.com' }, 500);
     }
   }
 

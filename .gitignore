@@ -44,5 +44,15 @@ Thumbs.db
 # Build
 android/
 ios/
+*.aab
+*.apk
+
 # Supabase CLI (arquivos temporários locais)
 supabase/.temp/
+
+# Backend legado (Fly.io — migrado para Supabase Edge Functions)
+backend/premium-api/
+
+# Scripts e arquivos temporários de desenvolvimento
+test_excluir.mjs
+capturar.ps1

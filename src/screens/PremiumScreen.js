@@ -101,7 +101,7 @@ export default function PremiumScreen({ navigation }) {
             } else {
               Alert.alert(
                 'Erro ao ativar Premium',
-                'Sua compra foi processada mas houve um erro na ativação. Entre em contato: suporte@safimatch.com.br',
+                'Sua compra foi processada mas houve um erro na ativação. Entre em contato: safimatchro@gmail.com',
               );
             }
           } catch (e) {

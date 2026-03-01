@@ -349,7 +349,7 @@ export default function ChatScreen({ navigation, route }) {
             onPress={() =>
               Alert.alert('Opções', '', [
                 { text: 'Bloquear usuária', style: 'destructive', onPress: () => Alert.alert('Em breve', 'Bloqueio disponível em breve.') },
-                { text: 'Reportar', onPress: () => Alert.alert('Reportar', 'Envie um e-mail para suporte@safimatch.com') },
+                { text: 'Reportar', onPress: () => Alert.alert('Reportar', 'Envie um e-mail para safimatchro@gmail.com') },
                 { text: 'Cancelar', style: 'cancel' },
               ])
             }

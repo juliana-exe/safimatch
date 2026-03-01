@@ -877,7 +877,7 @@ export default function ConfiguracaoScreen({ navigation }) {
           <Linha
             icone="warning-outline" titulo="Reportar problema"
             corIcone="#F57F17"
-            onPress={() => Alert.alert('Reportar', 'Para reportar problemas, envie um e-mail para suporte@safimatch.com')}
+            onPress={() => Alert.alert('Reportar', 'Para reportar problemas, envie um e-mail para safimatchro@gmail.com')}
           />
           <Sep />
           <Linha
