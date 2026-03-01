@@ -319,7 +319,16 @@ export default function DescobertaScreen({ navigation }) {
         >
           {/* Toque nas metades esquerda/direita para trocar foto */}
           {(perfis[0].fotos.length > 0 && perfis[0].fotos[fotoIdx])
-            ? <Image source={{ uri: perfis[0].fotos[fotoIdx] }} style={styles.cardImagem} />
+            ? <Image
+                source={{ uri: perfis[0].fotos[fotoIdx] }}
+                style={styles.cardImagem}
+                onError={() => {
+                  // URL quebrada → tenta próxima foto ou mostra placeholder
+                  const proximo = perfis[0].fotos.slice(fotoIdx + 1).findIndex(Boolean);
+                  if (proximo !== -1) setFotoIdx(fotoIdx + 1 + proximo);
+                  else setFotoIdx(perfis[0].fotos.length); // força placeholder
+                }}
+              />
             : <LinearGradient colors={['#F48FB1', '#AD1457']} style={[styles.cardImagem, styles.semFoto]}>
                 <Ionicons name="person-circle" size={120} color="rgba(255,255,255,0.35)" />
                 <Text style={styles.semFotoTexto}>Sem foto ainda</Text>
