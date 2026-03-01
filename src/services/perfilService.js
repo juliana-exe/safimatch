@@ -120,22 +120,19 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
     const user = await _getUser();
     if (!user) throw new Error('Não autenticada');
 
-    // Carrega configurações da usuária (pode não existir ainda)
-    const { data: config } = await supabase
-      .from('configuracoes_usuario')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Busca configurações e curtidas em paralelo (não dependem uma da outra)
+    const [{ data: config }, { data: curtidas }] = await Promise.all([
+      supabase.from('configuracoes_usuario').select('idade_min,idade_max').eq('user_id', user.id).maybeSingle(),
+      reiniciar
+        ? Promise.resolve({ data: [] })
+        : supabase.from('curtidas').select('para_user_id').eq('de_user_id', user.id),
+    ]);
 
     // IDs a excluir: sempre exclui a si mesma
     const excluir = [user.id];
 
     // Só exclui perfis já vistos se não for reinício
     if (!reiniciar) {
-      const { data: curtidas } = await supabase
-        .from('curtidas')
-        .select('para_user_id')
-        .eq('de_user_id', user.id);
       const jaViu = curtidas?.map(c => c.para_user_id) ?? [];
       excluir.push(...jaViu);
     }
@@ -143,11 +140,14 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
     const idadeMin = config?.idade_min ?? 18;
     const idadeMax = config?.idade_max ?? 60;
 
+    // Busca apenas os campos usados no card (evita transferir dados desnecessários)
+    const CAMPOS_CARD = 'user_id,nome,idade,cidade,bio,fotos,foto_principal,interesses,verificada';
+
     // Busca perfis excluindo os já vistos
     // Inclui perfis com idade NULL (data_nascimento não preenchida) para não sumir da descoberta
     let query = supabase
       .from('perfis_publicos')
-      .select('*')
+      .select(CAMPOS_CARD)
       .not('user_id', 'in', `(${excluir.join(',')})`)
       .or(`idade.gte.${idadeMin},idade.is.null`)
       .or(`idade.lte.${idadeMax},idade.is.null`)
