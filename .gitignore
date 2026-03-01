@@ -44,3 +44,5 @@ Thumbs.db
 # Build
 android/
 ios/
+# Supabase CLI (arquivos temporários locais)
+supabase/.temp/

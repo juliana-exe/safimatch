@@ -27,7 +27,7 @@ import {
 import { atualizarPerfil } from '../services/perfilService';
 import { useAuth } from '../context/AuthContext';
 
-const COD_LENGTH = 8;
+const COD_LENGTH = 6;
 const COUNTDOWN_INICIAL = 60;
 
 export default function VerificacaoScreen({ navigation, route }) {
@@ -52,6 +52,20 @@ export default function VerificacaoScreen({ navigation, route }) {
   const [sucesso,      setSucesso]      = useState(false);
   const inputs = useRef([]);
   const countdownRef = useRef(null);
+
+  // ── Retry de auth após sucesso (garante navegação mesmo com race condition) ──
+  useEffect(() => {
+    if (!sucesso) return;
+    // Tenta recarregar a sessão a cada 800ms por até 8s
+    // (necessário quando onAuthStateChange demora a disparar no React Native)
+    let tentativas = 0;
+    const id = setInterval(async () => {
+      tentativas++;
+      await recarregarAuth();
+      if (tentativas >= 10) clearInterval(id);
+    }, 800);
+    return () => clearInterval(id);
+  }, [sucesso]);
 
   // ── Countdown para reenvio ─────────────────────────────────────
   useEffect(() => {
@@ -109,7 +123,7 @@ export default function VerificacaoScreen({ navigation, route }) {
   const verificar = async (cod) => {
     const token = (cod ?? codigo.join('')).trim();
     if (token.length < COD_LENGTH) {
-      setErro('Digite o código completo de 8 dígitos.');
+      setErro('Digite o código completo de 6 dígitos.');
       return;
     }
     if (verificando) return;
@@ -131,26 +145,26 @@ export default function VerificacaoScreen({ navigation, route }) {
         return;
       }
 
-      // Mostra tela de sucesso imediatamente
+      // Salva os dados do perfil ANTES de sinalizar autenticação ao contexto.
+      // Isso evita race condition: se injetarmos a sessão primeiro, o AuthContext
+      // dispara obterMeuPerfil() e carrega um perfil vazio antes do update terminar.
+      if (pendingPerfil && Object.keys(pendingPerfil).length > 0) {
+        const resAtualizar = await atualizarPerfil(pendingPerfil, res.sessao ?? null);
+        if (!resAtualizar.sucesso) {
+          console.warn('[VerificacaoScreen] atualizarPerfil erro:', resAtualizar.erro);
+        }
+      }
+
+      // Mostra tela de sucesso
       setSucesso(true);
 
-      // Se o verifyOtp já retornou a sessão, injeta diretamente no contexto
-      // (zero chamadas de rede — navegação acontece em milissegundos)
+      // Perfil já salvo — agora injeta sessão no contexto.
+      // AuthContext vai buscar o perfil já preenchido.
       if (res.sessao) {
         setarSessaoImediata(res.sessao);
       } else {
         // Fallback: relê do AsyncStorage caso a sessão não venha no retorno
         recarregarAuth();
-      }
-
-      // Salva dados do perfil usando a sessão já disponível do verifyOtp
-      // (não depende do AsyncStorage, evita race condition)
-      if (pendingPerfil && Object.keys(pendingPerfil).length > 0) {
-        atualizarPerfil(pendingPerfil, res.sessao ?? null).then(resAtualizar => {
-          if (!resAtualizar.sucesso) {
-            console.warn('[VerificacaoScreen] atualizarPerfil erro:', resAtualizar.erro);
-          }
-        });
       }
     } finally {
       setVerificando(false);
@@ -184,7 +198,7 @@ export default function VerificacaoScreen({ navigation, route }) {
     email: {
       icone: 'mail',
       titulo: 'Verifique seu e-mail',
-      desc: `Enviamos um código de 8 dígitos para`,
+      desc: `Enviamos um código de 6 dígitos para`,
       dica: 'Verifique também a pasta de spam.',
     },
     telefone: {

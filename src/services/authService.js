@@ -4,7 +4,7 @@
 import { supabase } from '../config/supabase';
 
 const PREMIUM_API =
-  process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'https://safimatch-premium-api.fly.dev';
+  process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'https://nujzwirwcdlkytgldfsp.supabase.co/functions/v1/premium-api';
 
 // ================================================================
 // CADASTRO

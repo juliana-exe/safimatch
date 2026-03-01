@@ -70,7 +70,10 @@ async function autenticar(req, res) {
     return null;
   }
   try {
-    const { payload } = await jwtVerify(token, JWKS, { issuer: 'supabase' });
+    // O issuer real do Supabase é a URL do projeto + /auth/v1
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `${SUPABASE_URL}/auth/v1`,
+    });
     return payload.sub; // UUID do usuário
   } catch (e) {
     console.warn('[autenticar] Token inválido:', e.message);

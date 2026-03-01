@@ -305,6 +305,7 @@ export default function CadastroScreen({ navigation }) {
 
       // Dados de perfil que serão aplicados após verificação (ou agora, se autoconfirm)
       const perfilDados = {
+        nome: f.nome.trim(),
         data_nascimento: _brParaISO(f.dataNascimento),
         cidade: f.cidade.trim(),
         bio: f.bio.trim(),

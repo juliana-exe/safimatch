@@ -165,11 +165,6 @@ export default function RootNavigator() {
               options={{ animation: 'slide_from_right' }}
             />
             <Stack.Screen
-              name="Verificacao"
-              component={VerificacaoScreen}
-              options={{ animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen
               name="Premium"
               component={PremiumScreen}
               options={{ animation: 'slide_from_bottom' }}
