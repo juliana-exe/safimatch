@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }) => {
 
   // Relê a sessão manualmente — útil após verifyOtp, que às vezes não
   // dispara onAuthStateChange no React Native com AsyncStorage.
-  // Só  adb -s emulator-5554 shell ping -c 4 192.168.100.59 espera obterSessao() para setar autenticada=true rápido;
+  // Só espera obterSessao() para setar autenticada=true rápido;
   // o perfil é carregado em background sem bloquear a navegação.
   const recarregarAuth = async () => {
     try {
