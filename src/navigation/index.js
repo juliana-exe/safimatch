@@ -1,5 +1,5 @@
 // src/navigation/index.js - Safimatch
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,6 +7,7 @@ import { View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../config/supabase';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -21,6 +22,7 @@ import VerificacaoScreen from '../screens/VerificacaoScreen';
 import PremiumScreen from '../screens/PremiumScreen';
 import VerificacaoIdentidadeScreen from '../screens/VerificacaoIdentidadeScreen';
 import AdminVerificacoesScreen from '../screens/AdminVerificacoesScreen';
+import NotificacoesScreen from '../screens/NotificacoesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -45,6 +47,45 @@ function TabBarButton({ children, onPress, focused }) {
 
 // Navegação principal (tabs)
 function MainTabNavigator() {
+  const { usuario } = useAuth();
+  const [naoLidas, setNaoLidas] = useState(0);
+
+  // Atualiza badge de notificações em tempo real
+  useEffect(() => {
+    if (!usuario?.id) return;
+
+    const buscarNaoLidas = async () => {
+      const { data } = await supabase
+        .from('mensagens')
+        .select('id', { count: 'exact', head: true })
+        .eq('lida', false)
+        .neq('de_user_id', usuario.id);
+      setNaoLidas(data?.length ?? 0);
+    };
+
+    // Busca direto via count
+    const buscarCount = async () => {
+      const { count } = await supabase
+        .from('mensagens')
+        .select('*', { count: 'exact', head: true })
+        .eq('lida', false)
+        .neq('de_user_id', usuario.id);
+      setNaoLidas(count ?? 0);
+    };
+    buscarCount();
+
+    // Escuta novas mensagens em tempo real
+    const canal = supabase
+      .channel('badge-nao-lidas')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens' },
+        (p) => { if (p.new.de_user_id !== usuario.id) setNaoLidas(n => n + 1); })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensagens' },
+        () => { buscarCount(); })
+      .subscribe();
+
+    return () => { supabase.removeChannel(canal); };
+  }, [usuario?.id]);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -95,6 +136,22 @@ function MainTabNavigator() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'chatbubbles' : 'chatbubbles-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Notificacoes"
+        component={NotificacoesScreen}
+        options={{
+          tabBarLabel: 'Avisos',
+          tabBarBadge: naoLidas > 0 ? (naoLidas > 9 ? '9+' : naoLidas) : undefined,
+          tabBarBadgeStyle: { backgroundColor: COLORS.primary, color: '#fff', fontSize: 10 },
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'notifications' : 'notifications-outline'}
               size={24}
               color={color}
             />
