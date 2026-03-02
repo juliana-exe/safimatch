@@ -54,13 +54,29 @@ export async function registrarPushToken() {
     if (statusFinal !== 'granted') return null;
 
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('mensagens', {
-        name: 'Mensagens',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#AD1457',
-        sound: true,
-      });
+      await Promise.all([
+        Notifications.setNotificationChannelAsync('mensagens', {
+          name: 'Mensagens',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#AD1457',
+          sound: true,
+        }),
+        Notifications.setNotificationChannelAsync('curtidas', {
+          name: 'Curtidas',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          vibrationPattern: [0, 250],
+          lightColor: '#E91E8C',
+          sound: true,
+        }),
+        Notifications.setNotificationChannelAsync('matches', {
+          name: 'Matches',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 500, 250],
+          lightColor: '#7B1FA2',
+          sound: true,
+        }),
+      ]);
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync();

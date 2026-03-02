@@ -59,6 +59,8 @@ export const AuthProvider = ({ children }) => {
         if (s?.user) {
           const { perfil: p } = await obterMeuPerfil();
           setPerfil(p);
+          // Registra push token em background (falha silenciosa em emulador)
+          registrarPushToken().catch(() => {});
         }
       } catch (e) {
         console.warn('Erro ao inicializar auth:', e);
