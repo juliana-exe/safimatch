@@ -79,7 +79,9 @@ export async function registrarPushToken() {
       ]);
     }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: '7fefb6c2-7a7c-4384-8d80-499f76629b0a',
+    });
     const token = tokenData.data;
 
     await supabase

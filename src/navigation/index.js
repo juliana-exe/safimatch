@@ -1,6 +1,6 @@
 // src/navigation/index.js - Safimatch
-import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, useEffect, useRef } from 'react';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, ActivityIndicator } from 'react-native';
@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../config/supabase';
+import { ouvirToqueNotificacao } from '../services/notificationService';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -176,6 +177,24 @@ function MainTabNavigator() {
 // Navegador raiz com guarda de autenticação
 export default function RootNavigator() {
   const { autenticada, carregando } = useAuth();
+  const navigationRef = useNavigationContainerRef();
+  const navPronto = useRef(false);
+
+  // Escuta toque em notificação e navega para a tela correta
+  useEffect(() => {
+    const cancelar = ouvirToqueNotificacao((data) => {
+      if (!navPronto.current) return;
+      const tipo = data?.tipo;
+      if (tipo === 'mensagem' || tipo === 'match') {
+        // Abre a aba de Conversas (lista de chats)
+        navigationRef.navigate('Main', { screen: 'Chats' });
+      } else if (tipo === 'curtida') {
+        // Abre a aba de Descoberta
+        navigationRef.navigate('Main', { screen: 'Descoberta' });
+      }
+    });
+    return cancelar;
+  }, []);
 
   // Enquanto verifica sessão salva, exibe spinner
   if (carregando) {
@@ -187,7 +206,9 @@ export default function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => { navPronto.current = true; }}>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
       >
