@@ -24,7 +24,11 @@ export const obterMeuPerfil = async () => {
       .maybeSingle();  // não quebra quando 0 linhas
 
     if (error) throw error;
-    if (!data) throw new Error('Perfil não encontrado');
+
+    // Se perfil não existe ainda (usuária recém cadastrada), retorna padrão vazio
+    if (!data) {
+      return { sucesso: true, perfil: { user_id: user.id, nome: '', bio: '', fotos: [], interesses: [], completude: 0 } };
+    }
 
     // Calcula idade dinamicamente (a VIEW faz isso, mas a tabela não tem a coluna)
     const idade = data.data_nascimento
@@ -90,13 +94,6 @@ export const atualizarPerfil = async (dados, sessao = null) => {
       Object.entries(dados).filter(([k]) => camposPermitidos.includes(k))
     );
 
-    // Calcular completude do perfil (apenas para retornar, não persiste no banco)
-    const { data: perfilAtual } = await supabase
-      .from('perfis').select('*').eq('user_id', user.id).single();
-
-    const merged = { ...perfilAtual, ...dadosFiltrados };
-    const completude = _calcularCompletude(merged);
-
     const { data, error } = await supabase
       .from('perfis')
       .update(dadosFiltrados)
@@ -105,6 +102,7 @@ export const atualizarPerfil = async (dados, sessao = null) => {
       .single();
 
     if (error) throw error;
+    const completude = _calcularCompletude(data);
     return { sucesso: true, perfil: { ...data, completude } };
   } catch (error) {
     return { sucesso: false, erro: error.message };
@@ -140,23 +138,34 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
     const idadeMin = config?.idade_min ?? 18;
     const idadeMax = config?.idade_max ?? 60;
 
-    // Busca apenas os campos usados no card (evita transferir dados desnecessários)
-    const CAMPOS_CARD = 'user_id,nome,idade,cidade,bio,fotos,foto_principal,interesses,verificada,orientacao';
+    // Busca da tabela perfis diretamente para incluir usuárias com ativa=NULL
+    // (a view perfis_publicos filtra WHERE ativa=TRUE, excluindo cadastros antigos)
+    const CAMPOS_CARD = 'user_id,nome,data_nascimento,cidade,bio,fotos,foto_principal,interesses,verificada,orientacao';
+    const MS_ANO = 365.25 * 24 * 3600 * 1000;
 
-    // Busca perfis excluindo os já vistos
-    // Inclui perfis com idade NULL (data_nascimento não preenchida) para não sumir da descoberta
-    let query = supabase
-      .from('perfis_publicos')
+    // Busca mais registros para compensar o filtro de idade feito no cliente
+    const { data, error } = await supabase
+      .from('perfis')
       .select(CAMPOS_CARD)
       .not('user_id', 'in', `(${excluir.join(',')})`)
-      .or(`idade.gte.${idadeMin},idade.is.null`)
-      .or(`idade.lte.${idadeMax},idade.is.null`)
-      .limit(limite);
+      .or('ativa.eq.true,ativa.is.null')   // inclui ativas E cadastros sem o campo definido
+      .not('nome', 'is', null)             // só quem preencheu o nome
+      .limit(limite * 3);                  // pega extra para filtrar por idade no cliente
 
-    const { data, error } = await query;
     if (error) throw error;
 
-    return { sucesso: true, perfis: data ?? [] };
+    // Calcula idade no cliente e filtra pela faixa configurada
+    const perfis = (data ?? [])
+      .map(p => ({
+        ...p,
+        idade: p.data_nascimento
+          ? Math.floor((Date.now() - new Date(p.data_nascimento).getTime()) / MS_ANO)
+          : null,
+      }))
+      .filter(p => p.idade == null || (p.idade >= idadeMin && p.idade <= idadeMax))
+      .slice(0, limite);
+
+    return { sucesso: true, perfis };
   } catch (error) {
     return { sucesso: false, erro: error.message, perfis: [] };
   }

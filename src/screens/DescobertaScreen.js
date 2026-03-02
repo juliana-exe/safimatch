@@ -72,8 +72,15 @@ export default function DescobertaScreen({ navigation }) {
   const carregarPerfis = async (reiniciar = false) => {
     setCarregando(true);
     try {
-      const { perfis: lista } = await buscarPerfisDescoberta({ reiniciar });
-      // Garante que todo perfil tenha fotos válidas (sem URLs externas de terceiros)
+      let { perfis: lista } = await buscarPerfisDescoberta({ reiniciar });
+
+      // Se não encontrou nada sem reiniciar, tenta incluindo já vistos (evita tela vazia)
+      if (!reiniciar && (!lista || lista.length === 0)) {
+        const res2 = await buscarPerfisDescoberta({ reiniciar: true });
+        lista = res2.perfis ?? [];
+      }
+
+      // Garante que todo perfil tenha fotos válidas
       const normalizados = (lista ?? []).map(p => ({
         ...p,
         fotos: (p.fotos?.filter(Boolean).length > 0)
