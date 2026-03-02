@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../config/supabase';
@@ -27,28 +28,11 @@ import NotificacoesScreen from '../screens/NotificacoesScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Tab customizada
-function TabBarButton({ children, onPress, focused }) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-      }}
-    >
-      {children}
-    </TouchableOpacity>
-  );
-}
-
 // Navegação principal (tabs)
 function MainTabNavigator() {
   const { usuario } = useAuth();
   const [naoLidas, setNaoLidas] = useState(0);
+  const insets = useSafeAreaInsets();
 
   // Atualiza badge de notificações em tempo real
   useEffect(() => {
@@ -94,16 +78,16 @@ function MainTabNavigator() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
-          height: 68,
-          paddingBottom: 10,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 6,
           backgroundColor: COLORS.white,
           borderTopColor: COLORS.border,
           borderTopWidth: 1,
           elevation: 12,
-          shadowColor: COLORS.shadow,
+          shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
+          shadowOpacity: 0.08,
           shadowRadius: 8,
         },
         tabBarLabelStyle: {
@@ -111,7 +95,6 @@ function MainTabNavigator() {
           fontWeight: '600',
           marginTop: 2,
         },
-        tabBarButton: (props) => <TabBarButton {...props} />,
       })}
     >
       <Tab.Screen
