@@ -8,15 +8,13 @@ import { Platform } from 'react-native';
 // CONFIGURAÇÃO — Supabase Cloud
 // ================================================================
 const SUPABASE_URL =
-  process.env.EXPO_PUBLIC_SUPABASE_URL ||
-  'https://nujzwirwcdlkytgldfsp.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_URL;
 
 export const SUPABASE_ANON_KEY =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  'sb_publishable_7kBrEPAMyipnh4jtqwHaKw_NZ-E7Gzd';
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_ANON_KEY) {
-  throw new Error('[supabase.js] SUPABASE_ANON_KEY não definida.');
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error('[supabase.js] EXPO_PUBLIC_SUPABASE_URL ou EXPO_PUBLIC_SUPABASE_ANON_KEY não definida.');
 }
 
 // Fetch com timeout de 15 segundos (evita spinner infinito)

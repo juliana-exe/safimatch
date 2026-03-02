@@ -4,7 +4,7 @@
 import { supabase, SUPABASE_ANON_KEY } from '../config/supabase';
 
 const PREMIUM_API =
-  process.env.EXPO_PUBLIC_PREMIUM_API_URL ?? 'https://nujzwirwcdlkytgldfsp.supabase.co/functions/v1/premium-api';
+  process.env.EXPO_PUBLIC_PREMIUM_API_URL;
 
 // ================================================================
 // CADASTRO
