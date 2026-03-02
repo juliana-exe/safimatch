@@ -16,7 +16,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SPACING, RADIUS } from '../theme/colors';
 import { listarMatches } from '../services/matchService';
 import { supabase } from '../config/supabase';
-import { notificarNovaMensagem } from '../services/notificationService';
 import AvatarPessoa from '../components/AvatarPessoa';
 import { useAuth } from '../context/AuthContext';
 
@@ -45,7 +44,7 @@ export default function ChatListScreen({ navigation }) {
     }, [])
   );
 
-  // Realtime: escuta novas mensagens e atualiza a lista + notifica
+  // Realtime: atualiza lista localmente (sem reload de rede) quando chega mensagem nova
   useEffect(() => {
     if (!usuario?.id) return;
     const canal = supabase
@@ -53,18 +52,27 @@ export default function ChatListScreen({ navigation }) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'mensagens' },
-        async (payload) => {
+        (payload) => {
           const msg = payload.new;
           // Ignora mensagens que eu mesma enviei
           if (msg.de_user_id === usuario.id) return;
-          // Recarrega a lista para atualizar ultima_mensagem e badge
-          await carregar();
-          // Descobre o nome da remetente para a notificação
-          const match = matchesRef.current.find(m => m.match_id === msg.match_id);
-          const nome = match?.perfil_dela?.nome ?? 'Nova mensagem';
-          const texto = msg.tipo === 'foto_unica' ? '📷 Foto' :
-                        msg.tipo === 'foto' ? '📷 Foto' : msg.conteudo;
-          await notificarNovaMensagem(nome, texto);
+
+          // Atualiza o match em estado local — sem chamada de rede
+          setMatches(prev => {
+            const idx = prev.findIndex(m => m.match_id === msg.match_id);
+            if (idx === -1) return prev; // match não está na lista ainda — ok, reload no próximo foco
+            const atualizado = { ...prev[idx] };
+            const textoMsg = msg.tipo === 'foto_unica' || msg.tipo === 'foto'
+              ? '📷 Foto'
+              : msg.conteudo ?? '';
+            atualizado.ultima_mensagem      = textoMsg;
+            atualizado.ultima_mensagem_hora = msg.criado_em ?? new Date().toISOString();
+            atualizado.msgs_nao_lidas       = (atualizado.msgs_nao_lidas ?? 0) + 1;
+            const nova = [...prev];
+            nova[idx] = atualizado;
+            matchesRef.current = nova;
+            return nova;
+          });
         },
       )
       .subscribe();
@@ -88,7 +96,7 @@ export default function ChatListScreen({ navigation }) {
     return nome.toLowerCase().includes(busca.toLowerCase());
   });
 
-  const renderConversa = ({ item }) => {
+  const renderConversa = useCallback(({ item }) => {
     const parceira = item.perfil_dela ?? {};
     const foto = (parceira.fotos ?? [])[0] ?? null;
     const hora = item.ultima_mensagem_hora
@@ -128,7 +136,7 @@ export default function ChatListScreen({ navigation }) {
       </View>
     </TouchableOpacity>
   );
-};
+}, [navigation]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -219,6 +227,10 @@ export default function ChatListScreen({ navigation }) {
           ItemSeparatorComponent={() => <View style={styles.separador} />}
           contentContainerStyle={{ paddingBottom: SPACING.xl }}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={8}
         />
       )}
     </SafeAreaView>

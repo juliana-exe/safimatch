@@ -3,7 +3,7 @@
 // Usa lazy require() para não crashar quando o native module não está compilado
 // no APK (ex: debug build sem rebuild). Em produção funciona normalmente.
 
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import { supabase } from '../config/supabase';
 
 // Lazy: só carrega expo-notifications quando necessário e se disponível
@@ -98,8 +98,13 @@ export async function registrarPushToken() {
 }
 
 // ─── Notificação local de nova mensagem ───────────────────────────────────────
+// Só exibe quando o app está em background — em foreground o conteúdo já está
+// visível na tela e a Play Store penaliza notificações redundantes.
 export async function notificarNovaMensagem(remetente, conteudo) {
   try {
+    // Não dispara notificação local enquanto o app está na tela
+    if (AppState.currentState === 'active') return;
+
     const Notifications = getNotif();
     if (!Notifications) return;
     await Notifications.scheduleNotificationAsync({
@@ -108,6 +113,7 @@ export async function notificarNovaMensagem(remetente, conteudo) {
         body: conteudo,
         sound: true,
         data: { tipo: 'mensagem' },
+        ...(Platform.OS === 'android' ? { channelId: 'mensagens' } : {}),
       },
       trigger: null,
     });
