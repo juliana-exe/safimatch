@@ -31,6 +31,8 @@
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS",
         "com.android.vending.BILLING"
       ]
     },
@@ -43,7 +45,14 @@
       "expo-image-picker",
       "expo-asset",
       "expo-font",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon-512.png",
+          "color": "#AD1457",
+          "defaultChannel": "mensagens"
+        }
+      ],
       "react-native-iap"
     ],
     "extra": {
