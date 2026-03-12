@@ -105,11 +105,21 @@ export default function NotificacoesScreen({ navigation }) {
   );
 
   const abrirChat = (match) => {
+    // ChatScreen espera o objeto `conversa` completo — mesmo formato do ChatListScreen
+    const foto = match.perfil_dela?.foto_principal ?? null;
     navigation.navigate('Chat', {
-      matchId: match.match_id,
-      nome: match.perfil_dela?.nome,
-      foto: match.perfil_dela?.foto_principal,
-      userId: match.perfil_dela?.user_id,
+      conversa: {
+        ...match,
+        id: match.match_id,
+        nome: match.perfil_dela?.nome,
+        foto,
+        perfil_dela: {
+          ...match.perfil_dela,
+          fotos: match.perfil_dela?.fotos?.length > 0
+            ? match.perfil_dela.fotos
+            : foto ? [foto] : [],
+        },
+      },
     });
   };
 

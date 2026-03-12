@@ -188,6 +188,7 @@ const cadCidadeStyle = StyleSheet.create({
 export default function CadastroScreen({ navigation }) {
   const [etapa, setEtapa] = useState(1);
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const scrollViewRef = useRef(null);
   const [carregando, setCarregando] = useState(false);
   const [erros, setErros] = useState({});
   // Chips precisam de re-render, ficam em state
@@ -472,6 +473,7 @@ export default function CadastroScreen({ navigation }) {
             style={styles.input}
             defaultValue={form.current.confirmarSenha}
             onChangeText={(v) => { form.current.confirmarSenha = v; limparErro('confirmarSenha'); }}
+            onFocus={() => setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 150)}
             placeholder="Repita a senha"
             placeholderTextColor={COLORS.textMuted}
             secureTextEntry={!mostrarSenha}
@@ -591,8 +593,13 @@ export default function CadastroScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 0}
+        style={{ flex: 1 }}
+      >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

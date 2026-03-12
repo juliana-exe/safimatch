@@ -74,7 +74,8 @@ export default function ChatScreen({ navigation, route }) {
   // Escuta mensagens em tempo real
   useEffect(() => {
     if (!matchId) return;
-    const cancelar = ouvirMensagens(matchId, (nova) => {
+
+    const aoReceberMensagem = (nova) => {
       setMensagens(prev => {
         if (prev.find(m => m.id === nova.id)) return prev;
         return [...prev, nova];
@@ -84,7 +85,28 @@ export default function ChatScreen({ navigation, route }) {
         marcarComoLidas(matchId, outraUserId);
       }
       setTimeout(() => listaRef.current?.scrollToEnd({ animated: true }), 100);
-    });
+    };
+
+    // Chamado quando o WebSocket reconecta após queda (ex: app em background, troca de rede).
+    // Recarrega as últimas mensagens para cobrir o gap — eventos INSERT perdidos durante
+    // a desconexão não são reenviados pelo Supabase Realtime.
+    const aoReconectar = async () => {
+      const { mensagens: lista } = await obterMensagens(matchId, 0, 50);
+      if (!lista?.length) return;
+      setMensagens(prev => {
+        const jaTem = new Set(prev.map(m => m.id));
+        const novas = lista.filter(m => !jaTem.has(m.id));
+        if (!novas.length) return prev;
+        // Reordena por data para garantir ordem correta após merge
+        return [...prev, ...novas].sort(
+          (a, b) => new Date(a.criado_em) - new Date(b.criado_em)
+        );
+      });
+      if (outraUserId) marcarComoLidas(matchId, outraUserId);
+      setTimeout(() => listaRef.current?.scrollToEnd({ animated: false }), 150);
+    };
+
+    const cancelar = ouvirMensagens(matchId, aoReceberMensagem, aoReconectar);
     return cancelar;
   }, [matchId]);
 

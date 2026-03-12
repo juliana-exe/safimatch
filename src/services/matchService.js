@@ -29,6 +29,7 @@ export const curtir = async (paraUserId, tipo = 'like') => {
     if (error) throw error;
 
     // Verifica se houve match (consulta após o trigger rodar)
+    // maybeSingle evita erro 406 do PostgREST quando não há match (retorna null sem throw)
     const { data: match } = await supabase
       .from('matches')
       .select('id')
@@ -36,7 +37,7 @@ export const curtir = async (paraUserId, tipo = 'like') => {
         `and(usuario_a_id.eq.${user.id},usuario_b_id.eq.${paraUserId}),` +
         `and(usuario_a_id.eq.${paraUserId},usuario_b_id.eq.${user.id})`
       )
-      .single();
+      .maybeSingle();
 
     return {
       sucesso: true,

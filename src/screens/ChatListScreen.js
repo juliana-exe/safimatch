@@ -54,8 +54,6 @@ export default function ChatListScreen({ navigation }) {
         { event: 'INSERT', schema: 'public', table: 'mensagens' },
         (payload) => {
           const msg = payload.new;
-          // Ignora mensagens que eu mesma enviei
-          if (msg.de_user_id === usuario.id) return;
 
           // Atualiza o match em estado local — sem chamada de rede
           setMatches(prev => {
@@ -67,7 +65,10 @@ export default function ChatListScreen({ navigation }) {
               : msg.conteudo ?? '';
             atualizado.ultima_mensagem      = textoMsg;
             atualizado.ultima_mensagem_hora = msg.criado_em ?? new Date().toISOString();
-            atualizado.msgs_nao_lidas       = (atualizado.msgs_nao_lidas ?? 0) + 1;
+            // Só incrementa badge se for mensagem recebida (não enviada por mim)
+            if (msg.de_user_id !== usuario.id) {
+              atualizado.msgs_nao_lidas = (atualizado.msgs_nao_lidas ?? 0) + 1;
+            }
             const nova = [...prev];
             nova[idx] = atualizado;
             matchesRef.current = nova;
@@ -82,14 +83,16 @@ export default function ChatListScreen({ navigation }) {
   // Separa matches sem mensagens (novos) dos que já conversaram
   const matchesNovos = matches.filter(m => !m.ultima_mensagem);
 
-  // Lista principal: todos os matches, mensagens recentes primeiro
-  const todasConversas = [...matches].sort((a, b) => {
-    if (a.ultima_mensagem_hora && b.ultima_mensagem_hora)
-      return new Date(b.ultima_mensagem_hora) - new Date(a.ultima_mensagem_hora);
-    if (a.ultima_mensagem_hora) return -1;
-    if (b.ultima_mensagem_hora) return 1;
-    return 0;
-  });
+  // Lista principal: apenas matches que JÁ possuem mensagem, ordenadas por recência
+  const todasConversas = [...matches]
+    .filter(m => !!m.ultima_mensagem)
+    .sort((a, b) => {
+      if (a.ultima_mensagem_hora && b.ultima_mensagem_hora)
+        return new Date(b.ultima_mensagem_hora) - new Date(a.ultima_mensagem_hora);
+      if (a.ultima_mensagem_hora) return -1;
+      if (b.ultima_mensagem_hora) return 1;
+      return 0;
+    });
 
   const conversasFiltradas = todasConversas.filter((c) => {
     const nome = c.perfil_dela?.nome ?? '';

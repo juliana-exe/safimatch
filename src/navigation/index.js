@@ -39,16 +39,6 @@ function MainTabNavigator() {
   useEffect(() => {
     if (!usuario?.id) return;
 
-    const buscarNaoLidas = async () => {
-      const { data } = await supabase
-        .from('mensagens')
-        .select('id', { count: 'exact', head: true })
-        .eq('lida', false)
-        .neq('de_user_id', usuario.id);
-      setNaoLidas(data?.length ?? 0);
-    };
-
-    // Busca direto via count
     const buscarCount = async () => {
       const { count } = await supabase
         .from('mensagens')
@@ -182,14 +172,44 @@ export default function RootNavigator() {
 
   // Escuta toque em notificação e navega para a tela correta
   useEffect(() => {
-    const cancelar = ouvirToqueNotificacao((data) => {
+    const cancelar = ouvirToqueNotificacao(async (data) => {
       if (!navPronto.current) return;
       const tipo = data?.tipo;
-      if (tipo === 'mensagem' || tipo === 'match') {
-        // Abre a aba de Conversas (lista de chats)
+      // Edge Function envia 'matchId' (camelCase); suporte a ambos por segurança
+      const matchId = data?.matchId ?? data?.match_id;
+
+      if (tipo === 'mensagem' && matchId) {
+        // Tenta ir direto ao chat específico buscando os dados do match
+        try {
+          const { data: match } = await supabase
+            .from('matches_com_perfis')
+            .select('*')
+            .eq('match_id', matchId)
+            .single();
+          if (match) {
+            const conversa = {
+              id: match.match_id,
+              match_id: match.match_id,
+              nome: match.outra_nome,
+              foto: match.outra_foto,
+              perfil_dela: {
+                user_id: match.outra_user_id,
+                nome: match.outra_nome,
+                foto_principal: match.outra_foto,
+                fotos: match.outra_foto ? [match.outra_foto] : [],
+                verificada: match.outra_verificada,
+                online_agora: match.outra_online,
+              },
+            };
+            navigationRef.navigate('Main', { screen: 'Chats' });
+            navigationRef.navigate('Chat', { conversa });
+            return;
+          }
+        } catch { /* fallback: vai só para a lista */ }
+        navigationRef.navigate('Main', { screen: 'Chats' });
+      } else if (tipo === 'mensagem' || tipo === 'match') {
         navigationRef.navigate('Main', { screen: 'Chats' });
       } else if (tipo === 'curtida') {
-        // Abre a aba de Descoberta
         navigationRef.navigate('Main', { screen: 'Descoberta' });
       }
     });

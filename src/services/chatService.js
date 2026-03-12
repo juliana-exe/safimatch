@@ -119,8 +119,12 @@ export const marcarComoLidas = async (matchId, deUserId) => {
 // ================================================================
 // OUVIR MENSAGENS EM TEMPO REAL (WebSocket)
 // Retorna função de unsubscribe — chame ao desmontar o componente
+// onReconectar (opcional): chamado quando o WS reconecta após queda.
+//   Use para refazer fetch de mensagens e cobrir o gap de desconexão.
 // ================================================================
-export const ouvirMensagens = (matchId, onNovaMensagem) => {
+export const ouvirMensagens = (matchId, onNovaMensagem, onReconectar = null) => {
+  let primeiraConexao = true;
+
   const channel = supabase
     .channel(`chat-${matchId}`)
     .on(
@@ -131,21 +135,21 @@ export const ouvirMensagens = (matchId, onNovaMensagem) => {
         table: 'mensagens',
         filter: `match_id=eq.${matchId}`,
       },
-      async (payload) => {
-        // Busca o perfil da remetente para exibir no chat
-        const { data: perfil } = await supabase
-          .from('perfis')
-          .select('nome, foto_principal')
-          .eq('user_id', payload.new.de_user_id)
-          .single();
-
-        onNovaMensagem({
-          ...payload.new,
-          perfis: perfil,
-        });
+      (payload) => {
+        // Repassa diretamente — sem query extra que pode falhar silenciosamente
+        onNovaMensagem(payload.new);
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (err) console.warn('[Realtime] Erro na inscrição:', err.message);
+      if (status === 'SUBSCRIBED') {
+        if (!primeiraConexao && onReconectar) {
+          // WebSocket reconectou após queda — avisa para refetch de mensagens perdidas
+          onReconectar();
+        }
+        primeiraConexao = false;
+      }
+    });
 
   return () => supabase.removeChannel(channel);
 };

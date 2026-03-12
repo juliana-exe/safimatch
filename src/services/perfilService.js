@@ -118,6 +118,8 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
     const user = await _getUser();
     if (!user) throw new Error('Não autenticada');
 
+    const MS_ANO = 365.25 * 24 * 3600 * 1000;
+
     // Busca configurações e curtidas em paralelo (não dependem uma da outra)
     const [{ data: config }, { data: curtidas }] = await Promise.all([
       supabase.from('configuracoes_usuario').select('idade_min,idade_max').eq('user_id', user.id).maybeSingle(),
@@ -128,8 +130,6 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
 
     // IDs a excluir: sempre exclui a si mesma
     const excluir = [user.id];
-
-    // Só exclui perfis já vistos se não for reinício
     if (!reiniciar) {
       const jaViu = curtidas?.map(c => c.para_user_id) ?? [];
       excluir.push(...jaViu);
@@ -138,32 +138,40 @@ export const buscarPerfisDescoberta = async ({ limite = 20, reiniciar = false } 
     const idadeMin = config?.idade_min ?? 18;
     const idadeMax = config?.idade_max ?? 60;
 
-    // Busca da tabela perfis diretamente para incluir usuárias com ativa=NULL
-    // (a view perfis_publicos filtra WHERE ativa=TRUE, excluindo cadastros antigos)
-    const CAMPOS_CARD = 'user_id,nome,data_nascimento,cidade,bio,fotos,foto_principal,interesses,verificada,orientacao';
-    const MS_ANO = 365.25 * 24 * 3600 * 1000;
+    // Calcula datas de nascimento correspondentes à faixa de idade
+    // (filtragem no banco — evita buscar 60 registros para filtrar no cliente)
+    const hoje = new Date();
+    const dataMax = new Date(hoje.getFullYear() - idadeMin, hoje.getMonth(), hoje.getDate()).toISOString().slice(0, 10);
+    const dataMin = new Date(hoje.getFullYear() - idadeMax - 1, hoje.getMonth(), hoje.getDate()).toISOString().slice(0, 10);
 
-    // Busca mais registros para compensar o filtro de idade feito no cliente
-    const { data, error } = await supabase
+    const CAMPOS_CARD = 'user_id,nome,data_nascimento,cidade,bio,fotos,foto_principal,interesses,verificada,orientacao';
+
+    // Timeout de 8s para evitar que a query fique pendurada em conexões lentas
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Query timeout')), 8000)
+    );
+
+    const queryPromise = supabase
       .from('perfis')
       .select(CAMPOS_CARD)
       .not('user_id', 'in', `(${excluir.join(',')})`)
-      .or('ativa.eq.true,ativa.is.null')   // inclui ativas E cadastros sem o campo definido
-      .not('nome', 'is', null)             // só quem preencheu o nome
-      .limit(limite * 3);                  // pega extra para filtrar por idade no cliente
+      .or('ativa.eq.true,ativa.is.null')
+      .not('nome', 'is', null)
+      // Filtro de data no banco (não perfis sem data_nascimento — também incluídos)
+      .or(`data_nascimento.is.null,and(data_nascimento.gte.${dataMin},data_nascimento.lte.${dataMax})`)
+      .limit(limite);
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error) throw error;
 
-    // Calcula idade no cliente e filtra pela faixa configurada
-    const perfis = (data ?? [])
-      .map(p => ({
-        ...p,
-        idade: p.data_nascimento
-          ? Math.floor((Date.now() - new Date(p.data_nascimento).getTime()) / MS_ANO)
-          : null,
-      }))
-      .filter(p => p.idade == null || (p.idade >= idadeMin && p.idade <= idadeMax))
-      .slice(0, limite);
+    // Calcula idade no cliente só para exibição no card
+    const perfis = (data ?? []).map(p => ({
+      ...p,
+      idade: p.data_nascimento
+        ? Math.floor((Date.now() - new Date(p.data_nascimento).getTime()) / MS_ANO)
+        : null,
+    }));
 
     return { sucesso: true, perfis };
   } catch (error) {

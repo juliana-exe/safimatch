@@ -1,5 +1,5 @@
 // src/screens/DescobertaScreen.js - Safimatch
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -62,6 +62,8 @@ export default function DescobertaScreen({ navigation }) {
   const [matchAtual, setMatchAtual] = useState(null);
   const [ultimaAcao, setUltimaAcao] = useState(null);
   const [fotoIdx, setFotoIdx] = useState(0);
+  const retryTimer = useRef(null);
+  const retryCount = useRef(0);
 
   // Bônus aleatórios
   const [bonusSuperlike, setBonusSuperlike] = useState(0);
@@ -69,16 +71,43 @@ export default function DescobertaScreen({ navigation }) {
   const [bannerBonus, setBannerBonus] = useState(null);
   const bannerAnim = useRef(new Animated.Value(-80)).current;
 
-  const carregarPerfis = async (reiniciar = false) => {
+  const carregarPerfis = useCallback(async (reiniciar = false) => {
     setCarregando(true);
+    clearTimeout(retryTimer.current);
+    retryTimer.current = null;
+    let agendouRetry = false;
     try {
       let { perfis: lista } = await buscarPerfisDescoberta({ reiniciar });
 
-      // Se não encontrou nada sem reiniciar, tenta incluindo já vistos (evita tela vazia)
-      if (!reiniciar && (!lista || lista.length === 0)) {
+      // Se não encontrou nada no primeiro carregamento (sem retry), tenta incluir
+      // já vistas — cobre o caso de usuária que viu todos os perfis disponíveis.
+      // Não faz a segunda chamada durante retries: evita dobrar o tempo de espera
+      // para usuárias novas cuja sessão ainda não propagou no Supabase.
+      if (!reiniciar && retryCount.current === 0 && (!lista || lista.length === 0)) {
         const res2 = await buscarPerfisDescoberta({ reiniciar: true });
         lista = res2.perfis ?? [];
       }
+
+      // Ainda vazio — retry automático para usuárias recém cadastradas cuja
+      // sessão ou registro no banco ainda não propagou completamente.
+      if (!lista || lista.length === 0) {
+        if (retryCount.current < 4) {
+          // Retries mais agressivos no início: 1.5s, 3s, 6s, 10s = máx ~20s
+          const delays = [1500, 3000, 6000, 10000];
+          const delay = delays[retryCount.current] ?? 10000;
+          retryCount.current += 1;
+          agendouRetry = true;
+          retryTimer.current = setTimeout(() => carregarPerfis(true), delay);
+          return;
+        }
+        // Esgotou retries: mostra tela vazia com botão de tentar novamente
+        retryCount.current = 0;
+        setPerfis([]);
+        return;
+      }
+
+      // Encontrou perfis — reseta contador
+      retryCount.current = 0;
 
       // Garante que todo perfil tenha fotos válidas
       const normalizados = (lista ?? []).map(p => ({
@@ -93,12 +122,26 @@ export default function DescobertaScreen({ navigation }) {
       _prefetchFotos(normalizados);
     } catch (e) {
       console.warn('Erro ao carregar perfis:', e);
+      // Em caso de erro também tenta retry
+      if (retryCount.current < 4) {
+        const delays = [1500, 3000, 6000, 10000];
+        const delay = delays[retryCount.current] ?? 10000;
+        retryCount.current += 1;
+        agendouRetry = true;
+        retryTimer.current = setTimeout(() => carregarPerfis(true), delay);
+        return;
+      }
+      retryCount.current = 0;
     } finally {
-      setCarregando(false);
+      if (!agendouRetry) setCarregando(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { carregarPerfis(); _carregarBonus(); }, []);
+  useEffect(() => {
+    carregarPerfis();
+    _carregarBonus();
+    return () => clearTimeout(retryTimer.current);
+  }, []);
 
   // ── Bônus ──────────────────────────────────────────────────────────────────
   // Só seta o label; a animação roda no useEffect DEPOIS do re-render
@@ -253,7 +296,7 @@ export default function DescobertaScreen({ navigation }) {
           </Text>
           <TouchableOpacity
             style={styles.btnRecarregar}
-            onPress={() => carregarPerfis(true)}
+            onPress={() => { retryCount.current = 0; carregarPerfis(true); }}
           >
             <Text style={styles.btnRecarregarText}>Recomeçar</Text>
           </TouchableOpacity>
